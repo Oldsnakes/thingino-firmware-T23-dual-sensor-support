@@ -1,21 +1,14 @@
-1/28/2026
+3/4/2026
 
-This project is based on the wonderful work by team of thingino-firware and Prudynt-T.   Some features been added to the Prudynt-T and WebUI for my own experiment.  
+This project is based on the wonderful work by team of thingino-firware and Prudynt-T. Some features been added to the Prudynt-T and WebUI for my own experiment.
 
-The code was based on the “master+eebcb12” build with Oct. 2025 JASON WebUI.  And, it has only been tested on <szt_ct211_t23n_gc1084_dual_atbm6012bx> dual sensors camera, which is not a currently supported platform, so, it is nowhere near completed. 
-
-The Thingino-firmware development has already evolved a lot on WebUI since by the team.  Therefore these changes no longer able to merge with the current repository.  Since I am not following all the improvements in the current development closely, some of these may already have been worked on or discussed.  Therefore, I would like to just post them as ideas for the team as alternatives. (only changed files are posted)
+The code was based on the “master+eebcb12” build with Oct. 2025 JASON WebUI. And, it has only been tested on <szt_ct211_t23n_gc1084_dual_atbm6012bx> dual sensors camera, which is not a currently supported platform, so, it is nowhere near completed.
 
 Features:
--  Add control to WebUI for manual exposure and analog gain to extend low light range.
--  Integrate GPIO control into Prudynt for better access to the lights, sensor switch.  
--  Add Tiled/Map multi-ROIs to motion control.  This allows detection of regions of interest only to avoid false alarm.
--  Integrate Motor control to interface with motor-daemon for faster response.
--  Add auto tracking to PTZ camera and turn on white light when motion is detected.  
--  Add dual-sensor/dual-stream (time-shared) RTSP/JPEG streaming at front end and dual-view to WebUI.  (platform dependent)
-  
-![preview-Dual Sensor-1](https://github.com/user-attachments/assets/66fbfdaf-b6a1-4053-81ec-bd5e3e5cacae)
-![streamer-Dual Sensor-1](https://github.com/user-attachments/assets/d49fc930-2191-47fc-9a3b-3d4105ad5dc7)
-![Motion-Box Mode-1](https://github.com/user-attachments/assets/3cfd0f67-4549-4b62-94eb-99277ef237dd)
-![Motion-Map Mode-1](https://github.com/user-attachments/assets/991bdb29-53c2-41dc-b2bb-a76220bfed4d)
-![Motion-heat map-logread](https://github.com/user-attachments/assets/1c235d8a-e411-4478-8137-e6d84a47b898)
+
+- Dual sensor support for the T23 based camera. The sensor is switched at T23 MIPI interface with a MIPI switch and feed to two seperate stream path through encoders. The is different with the front end switching done in the earlier project, and this is how the Ingenic based design in comercial deployment. The work still in progress as there are issues at image processing area need to be addressed.
+- Add dual-sensor/dual-stream RTSP/JPEG streaming and dual-view to WebUI.
+- Integrate GPIO control into Prudynt for better access to the lights, sensor switch.
+- Add Tiled/Map multi-ROIs to motion control. This allows detection of regions of interest only to avoid false alarm.
+- Integrate Motor control to interface with motor-daemon for faster response.
+- Add auto tracking to PTZ camera and turn on white light when motion is detected.
