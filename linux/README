@@ -1,3 +1,2 @@
-i2c-v12-jz.c modified for replicate write to both i2c0/i2c1.  (a hack)
-clk-gate.c modified to open for both i2c bus.
-both sensor on i2c bus will have same register settings with same attributes.
+Kconfig:
+  add PA16/17 ports to I2C1 
