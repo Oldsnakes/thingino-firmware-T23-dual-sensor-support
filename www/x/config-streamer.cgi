@@ -139,9 +139,6 @@ default_for rtsp_password "thingino"
 <div class="col-3"><% field_switch "image_alt_sensor" "Dual Camera" %></div>
 <div class="col-3"><% field_switch "gpio_sensor_switch" "Camera Select" %></div>
 </div>
-<div class="row g-2">
-<div class="col-3"><% field_number "image_alt_speed" "Alt Rate-msec(10-30000)" "10,30000,1000" %></div>
-</div>
 </div>
 </div>
 </div>
@@ -152,7 +149,7 @@ default_for rtsp_password "thingino"
 <div class="row g-2">
 <div class="col-3"><% field_text "${domain}_width" "Width" %></div>
 <div class="col-3"><% field_text "${domain}_height" "Height" %></div>
-<div class="col-6"><% field_range "${domain}_fps" "FPS" "$sensor_fps_min,$sensor_fps_max,1" %></div>
+<div class="col-6"><% field_range "${domain}_fps" "FPS" "$sensor_min_fps,$sensor_max_fps,1" %></div>
 </div>
 <div class="row g-2">
 <div class="col-3"><% field_select "${domain}_format" "Format" $FORMATS %></div>
@@ -387,8 +384,7 @@ DEFAULT_VALUES = {
 	'image_wb_rgain': 0,
 	'image_hflip': false,
 	'image_vflip': false,
-	'image_alt_sensor': false,
-	'image_alt_speed': 2000,
+	'image_alt_sensor': true,
 	'image_again_mode': false,
 	'image_again_gain': 15000,
 	'image_core_expr_mode': true,
@@ -413,7 +409,7 @@ const image_params = [
 	'brightness', 'contrast', 'core_wb_mode', 'defog_strength',
 	'dpc_strength', 'drc_strength', 'hflip', 'highlight_depress', 'hue',
 	'max_again', 'max_dgain', 'running_mode', 'saturation', 'sharpness',
-	'alt_sensor', 'alt_speed','again_mode', 'again_gain', 'core_expr_mode', 'core_expr_time',
+	'alt_sensor', 'again_mode', 'again_gain', 'core_expr_mode', 'core_expr_time',
 	'sinter_strength', 'temper_strength', 'vflip', 'wb_bgain', 'wb_rgain'
 ];
 
