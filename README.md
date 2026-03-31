@@ -1,18 +1,18 @@
-3/4/2026
+3/31/2026
 
 This project is based on the wonderful work by team of thingino-firmware and Prudynt-T. Some features been added to the Prudynt-T and WebUI for my own experiment.
 
-The code was based on the “master+eebcb12” build with Oct. 2025 JASON WebUI. And, it has only been tested on <szt_ct211_t23n_gc1084_dual_atbm6012bx> dual sensors camera, which is not a currently supported platform, so, it is nowhere near completed.
+The code was based on the “master+eebcb12” build with Oct. 2025 JASON WebUI. And, it has only been tested on <szt_ct211_t23n_gc1084_dual_atbm6012bx> dual sensors camera, which is not a supported platform by the team currently.  Only related and changed source code is posted.
 
 Features:
 
-- Dual sensor support for the T23 based camera. The sensor is switched at T23 MIPI interface with a MIPI switch and feed to two seperate stream path through encoders. The is different with the front end switching done in the earlier project, and this is how the Ingenic based design is done in comercial deployment. The work still in progress as there are issues at image processing area need to be addressed.
+- Dual sensor support for the T23 based camera. The sensor is switched at T23 MIPI interface with a MIPI switch and feed to two seperate stream path through the encoders. The is different with the front end switching has done in the earlier project, and this is how the Ingenic based T23 design is done in the T23 comercial deployment. 
 - Add dual-sensor/dual-stream RTSP/JPEG streaming and dual-view to WebUI.  
-- Integrate GPIO control into Prudynt for better access to the lights and sensor switch.
+- Integrate GPIO control into Prudynt for better access to the lights and the sensor switch.
 - Add Tiled/Map multi-ROIs to motion control. This allows detection of regions of interest only to avoid false alarm.  The monitored stream is selectable between stream 0 and 1.
 - Integrate Motor control to interface with motor-daemon for faster response.
-- Add auto tracking to PTZ camera and turn on white light when motion is detected.
-- Add seperate controls in WebUI to change sensor setting individually or both.
+- Add auto tracking to PTZ camera and allows turning on white light when motion is detected.
+- Add seperate controls in WebUI to change sensors setting individually, or both.
 
-![config-streamer-dual-common](https://github.com/user-attachments/assets/45680d91-2498-4703-ba1e-ba178e2ca1ee)
+![config-streamer-dual-common-1](https://github.com/user-attachments/assets/119085eb-f1d3-4d3f-8485-3e0952887eef)
 ![config-streamer-dual-stream](https://github.com/user-attachments/assets/fbac7f26-6347-4057-b423-1a53eef4aa15)
