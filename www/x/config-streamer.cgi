@@ -591,11 +591,11 @@ function handleMessage(msg) {
 				if ($(`#preview_source_0`).checked) {
 					$('#preview').src='/x/ch0.mjpg';
 					$('#preview1').src='/x/ch1.mjpg';
-					$('#mdPreview').src='/x/ch0.mjpg';
+					$('#preview_fullsize').src='/x/ch0.mjpg';
 				} else {
 					$('#preview').src='/x/ch1.mjpg';
 					$('#preview1').src='/x/ch0.mjpg';
-					$('#mdPreview').src='/x/ch1.mjpg';
+					$('#preview_fullsize').src='/x/ch1.mjpg';
 				}
 	   		}
            		else  if (data.alt_sensor == false) {
@@ -926,6 +926,7 @@ for (const i in [0, 1]) {
 $('#preview_source_0').addEventListener('click', () => 
 	{ 
 		$('#preview').src='/x/ch0.mjpg';
+		$('#preview_fullsize').src='/x/ch0.mjpg';
 //		if ($(`#image_alt_sensor`).checked) {
 			$('#preview1').src='/x/ch1.mjpg';
 //		}
@@ -933,6 +934,7 @@ $('#preview_source_0').addEventListener('click', () =>
 $('#preview_source_1').addEventListener('click', () => 
 	{ 
 		$('#preview').src='/x/ch1.mjpg';
+		$('#preview_fullsize').src='/x/ch1.mjpg';
 //		if ($(`#image_alt_sensor`).checked) {
 			$('#preview1').src='/x/ch0.mjpg';
 //		}
