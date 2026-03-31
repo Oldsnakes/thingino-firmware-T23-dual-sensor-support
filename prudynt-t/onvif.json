@@ -1,0 +1,120 @@
+{
+  "adv_enable_media2": false,
+  "adv_fault_if_set": false,
+  "adv_fault_if_unknown": false,
+  "adv_synology_nvr": false,
+  "aux": [
+    {
+      "exec": "irled on",
+      "name": "IRLED ON"
+    },
+    {
+      "exec": "irled off",
+      "name": "IRLED OFF"
+    },
+    {
+      "exec": "color on",
+      "name": "COLOR ON"
+    },
+    {
+      "exec": "color off",
+      "name": "COLOR OFF"
+    }
+  ],
+  "events": [
+    {
+      "input_file": "/run/motion/motion_alarm",
+      "source_name": "VideoSourceConfigurationToken",
+      "source_type": "tt:ReferenceToken",
+      "source_value": "VideoSourceConfigToken",
+      "topic": "tns1:VideoSource/MotionAlarm"
+    },
+    {
+      "input_file": "/tmp/hardware_failure",
+      "source_name": "Source",
+      "source_type": "tt:ReferenceToken",
+      "source_value": "HardwareId",
+      "topic": "tns1:Device/HardwareFailure"
+    }
+  ],
+  "events_enable": 1,
+  "firmware_ver": "",
+  "hardware_id": "ingenic_t23n",
+  "ifs": "wlan0",
+  "loglevel": "ERROR",
+  "manufacturer": "Manufacturer",
+  "model": "szt_ct211_t23n_gc1084_dual_atbm6012bx",
+  "password": "thingino",
+  "port": 80,
+  "profiles": {
+    "stream0": {
+      "audio_decoder": "AAC",
+      "audio_encoder": "AAC",
+      "height": 720,
+      "name": "Profile_0",
+      "snapurl": "http://%s/image.jpg",
+      "type": "H264",
+      "url": "rtsp://%s/ch0",
+      "width": 1280
+    },
+    "stream1": {
+      "audio_decoder": "AAC",
+      "audio_encoder": "AAC",
+      "height": 720,
+      "name": "Profile_1",
+      "snapurl": "http://%s/image.jpg",
+      "type": "H264",
+      "url": "rtsp://%s/ch1",
+      "width": 1280
+    }
+  },
+  "ptz": {
+    "continuous_move": "/bin/motors -d h -x %f -y %f",
+    "enable": 1,
+    "get_position": "/bin/motors -p",
+    "get_presets": "/sbin/ptz_presets -g",
+    "goto_home_position": "/bin/motors -d b",
+    "is_moving": "/bin/motors -b",
+    "jump_to_abs": "/bin/motors -d h -x %f -y %f",
+    "jump_to_rel": "/bin/motors -d g -x %f -y %f",
+    "max_step_x": 4000,
+    "max_step_y": 2000,
+    "max_step_z": 0,
+    "min_step_x": 0,
+    "min_step_y": 0,
+    "min_step_z": 0,
+    "move_down": "/bin/motors -d h -y 2000",
+    "move_in": "/sbin/ptz_zoom_in",
+    "move_left": "/bin/motors -d h -x 0",
+    "move_out": "/sbin/ptz_zoom_out",
+    "move_preset": "/sbin/ptz_presets %d > /dev/null",
+    "move_right": "/bin/motors -d h -x 4000",
+    "move_stop": "/bin/motors -d s",
+    "move_up": "/bin/motors -d h -y 0",
+    "remove_preset": "/sbin/ptz_presets -r %d > /dev/null",
+    "set_home_position": "/sbin/ptz_set_home",
+    "set_preset": "/sbin/ptz_presets -a %d %s > /dev/null"
+  },
+  "raw_log_directory": "",
+  "raw_log_on_error_only": false,
+  "relays": [
+    {
+      "close": "ircut off",
+      "idle_state": "close",
+      "open": "ircut on"
+    },
+    {
+      "close": "irled off",
+      "idle_state": "close",
+      "open": "irled on"
+    }
+  ],
+  "scopes": [
+    "onvif://www.onvif.org/Profile/Streaming",
+    "onvif://www.onvif.org/Profile/T",
+    "onvif://www.onvif.org/hardware",
+    "onvif://www.onvif.org/name"
+  ],
+  "serial_num": "02f14f27956d",
+  "username": "thingino"
+}
