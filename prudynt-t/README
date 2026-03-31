@@ -1,1 +1,42 @@
+Change List:
 
+- Dual Sensors support
+    Setup:
+      SDK firmware:  3.10\sdk\t23\1.1.2-double
+      prudynt-t:  1.1.0
+      libimp:  1.1.0
+      sensor:  sensor_gc1084_t23.ko,  sensor_gc1084s1_t23.ko, 
+      sensor-iq:  gc1084-t23.bin/gc1084s1-t23.bin (version 2.20)
+    Stream definition:
+      Stream 0:  H264, First sensor, full resolution, RTSP channel 0, OnVif profile 0
+      Stream 1:  H264, Second sensor, full resolution, RTSP channel 1, OnVif profile 1
+      Stream 2:  MJpeg, First sensor, full resolution, WebUI camera 1
+      Stream 3:  MJpeg, Second sensor, full resolution, WebUI camera 2
+
+- Tiled Motion Detection (Motion.cpp)
+  WebUI:  service-motion-map
+    white light control.
+    define ROIs in a 8x6 tiles or a boxed area.
+    auto motion tracking with weighted ROI.
+- Stream image settings:  
+  WebUI:  config-streamer
+    Image correction controls:
+    Camera 1:  stream 0, stream 2
+    Camera 2:  stream 1, stream 3
+    Camera 1/2:  All streams
+- Direct GPIO control (ctrls_hal.cpp)
+  GPIO definition from file (/tmp/environment)
+  Acquired GPIO definition: 
+    white light
+    ir850
+    ir940
+    ircut
+    mipi sensor switch
+- Direct Motor command (Motor.cpp)
+
+Bug List:
+
+- Can not change WB settings.
+- DGain cause exposure chasing.
+- Manual AGain does not work.
+  
