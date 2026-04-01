@@ -37,10 +37,8 @@ which motors > /dev/null && has_motors="true"
 <label class="btn btn-dark border mb-2" for="gpio_ir850" title="IR LED 850 nm"><img src="/a/light_850nm.svg" alt="850nm LED" class="img-fluid"></label>
 <% fi %>
 
-<% if [ -n "$gpio_sensor_switch" ]; then %>
-<input type="checkbox" class="btn-check" name="gpio_sensor_switch" id="gpio_sensor_switch" value="1">
-<label class="btn btn-dark border mb-2" for="gpio_sensor_switch" title="CAM Select"><img src="/a/cam_select.svg" alt="CAM Select" class="img-fluid"></label>
-<% fi %>
+<input type="checkbox" class="btn-check" name="sensor_select" id="sensor_select" value="1">
+<label class="btn btn-dark border mb-2" for="sensor_select" title="CAM Select"><img src="/a/cam_select.svg" alt="CAM Select" class="img-fluid"></label>
 
 <% if [ -n "$gpio_ir940_x" ]; then %>
 <input type="checkbox" class="btn-check" name="gpio_ir940" id="gpio_ir940" value="1"> 
@@ -115,36 +113,55 @@ for i in email ftp mqtt telegram webhook ntfy; do
 
 const ImageBlackMode = 1
 const ImageColorMode = 0
-const gpio_params = ['ir850', 'white', 'ircut', 'sensor_switch','ir940'];
+const gpio_params = ['ir850', 'white', 'ircut', 'ir940'];
 const image_params = ['running_mode','alt_sensor'];
 const AltSensor = 0
 
 const endpoint = '/x/json-prudynt.cgi';
 
 function handleMessage(msg) {
-	if (msg.image) {
-		if (msg.image.hflip)
-			$('#rotate').checked = msg.image.hflip;
-		if (msg.image.vflip)
-			$('#rotate').checked = msg.image.vflip;
-                if (msg.image.running_mode <= 1) {
-                        $('#image_running_mode').checked = (msg.image.running_mode == 0);
+   for (let i = 1; i >= 0; i--) {
+	const domain = `image${i}`;
+	data = msg[domain];
+
+	if (data) {
+		if (data.hflip != 'undefined')
+			$('#rotate').checked = data.hflip;
+		if (data.vflipi != 'undefined')
+			$('#rotate').checked = data.vflip;
+                if (data.running_mode <= 1) {
+                        $('#image_running_mode').checked = (data.running_mode == 0);
                 }
-               	if (msg.image.alt_sensor == true) {
+               	if (data.alt_sensor == true) {
 			$(`#preview1`).style.display = 'block'; 
 			$(`#preview1`).style.visibility = 'visible'; 
-			$(`#gpio_sensor_switch`).style.display = 'none'; 
-		//	preview1.src = '/x/ch2.mjpg';
-		// 	preview1.addEventListener('load', () => {
-		//		lastLoadTime = Date.now()
-		//	});
                         $('#image_alt_sensor').checked = 1;
 		}
-		else  if (msg.image.alt_sensor == false) {
+		else  if (data.alt_sensor == false) {
 			$(`#preview1`).style.display = 'none'; 
 			$(`#preview1`).style.visibility = 'hidden'; 
-			$(`#gpio_sensor_switch`).style.display = 'inline-block'; 
                         $('#image_alt_sensor').checked = 0;
+		}
+	} 
+    }
+	if (msg.sensor) {
+                data = msg.sensor;
+                if (data) {
+               	   if (data.select != 'undefined') {
+			if (data.select == true) {
+				$(`#preview`).src = '/x/ch0.mjpg';
+				$(`#preview1`).src = '/x/ch1.mjpg';
+				$(`#preview_fullsize`).src = '/x/ch0.mjpg';
+			} else {
+				$(`#preview`).src = '/x/ch1.mjpg';
+				$(`#preview1`).src = '/x/ch0.mjpg';
+				$(`#preview_fullsize`).src = '/x/ch1.mjpg';
+			}	
+        		sendToEndpoint('{'+
+				'"image":{"hflip":null,"vflip":null,'+
+				   '"running_mode":null, "alt_sensor":null}'+
+				'}');
+		   }
 		}
 	}
 	if (msg.gpio) {
@@ -154,7 +171,7 @@ function handleMessage(msg) {
                                	if (data[x] <= 1)
 					if ($(`#gpio_${x}`))
 						$(`#gpio_${x}`).checked = (data[x] == 1);
-                        });
+                       });
                 }
 	}
 	if (msg.motion && msg.motion.enabled) {
@@ -169,9 +186,10 @@ function handleMessage(msg) {
 
 async function loadConfig() {
 	const payload = '{'+
-		'"image":{"hflip":null,"vflip":null},'+
-		'"image":{"running_mode":null, "alt_sensor":null},'+
-		'"gpio":{"ir850":null,"white":null,"ircut":null,"sensor_switch":null,"ir940":null,"daynight":null},'+
+		'"image":{"hflip":null,"vflip":null,'+
+		   '"running_mode":null, "alt_sensor":null},'+
+		'"gpio":{"ir850":null,"white":null,"ircut":null,"ir940":null,"daynight":null},'+
+		'"sensor":{"select":null},'+
 		'"motion":{"enabled":null},'+
 		'"rtsp":{"username":null,"password":null,"port":null},'+
 		'"stream0":{"rtsp_endpoint":null},'+
@@ -286,6 +304,8 @@ function saveValue(domain, name) {
 			value = el.checked ? 0 : 1;
 		else if (domain == 'gpio' )
 			value = el.checked ? 1 : 0;
+		else if (domain == 'sensor' && name == 'select')
+			value = el.checked ? 2 : 1;
 		else
 			value = el.checked;
 	}
@@ -328,6 +348,15 @@ $('#rotate').addEventListener('change', ev =>
 $("#gpio_daynight").addEventListener('change', ev =>
 	ev.target.checked ? ntoggleDayNight(1) : ntoggleDayNight(0));
 
+$('#sensor_select').addEventListener('click', () => 
+	{ 
+		saveValue('sensor','select');
+//		$('#preview').src='/x/ch0.mjpg';
+//		$('#preview_fullsize').src='/x/ch0.mjpg';
+//		if ($(`#image_alt_sensor`).checked) {
+//			$('#preview1').src='/x/ch1.mjpg';
+//		}
+	 });
 
 // Init on load
 loadConfig().then(() => {
@@ -337,11 +366,12 @@ loadConfig().then(() => {
 	const preview1 = $('#preview1');
 	let lastLoadTime = Date.now();
 	preview.src = '/x/ch0.mjpg';
+	preview_fullsize.src = '/x/ch0.mjpg';
 	preview.addEventListener('load', () => {
 		lastLoadTime = Date.now()
 	});
 	// if ($(`#image_alt_sensor`).checked) {
-		preview1.src = '/x/ch2.mjpg';
+		preview1.src = '/x/ch1.mjpg';
 		preview1.addEventListener('load', () => {
 			lastLoadTime = Date.now()
 		});
