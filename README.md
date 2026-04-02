@@ -16,3 +16,5 @@ Features:
 
 ![config-streamer-dual-common-1](https://github.com/user-attachments/assets/119085eb-f1d3-4d3f-8485-3e0952887eef)
 ![config-streamer-dual-stream](https://github.com/user-attachments/assets/fbac7f26-6347-4057-b423-1a53eef4aa15)
+![service-motion-map](https://github.com/user-attachments/assets/1d25a4b6-20cd-46fe-a0c5-3ee2d687f9d0)
+
