@@ -11,8 +11,10 @@ IMPEncoder *IMPEncoder::createNew(
     _stream *stream,
     int encChn,
     int encGrp,
+//    int fsChnNum,
     const char *name)
 {
+//    return new IMPEncoder(stream, encChn, encGrp, fsChnNum, name);
     return new IMPEncoder(stream, encChn, encGrp, name);
 }
 
@@ -49,6 +51,7 @@ void MakeTables(int q, uint8_t *lqt, uint8_t *cqt)
         cqt[i] = static_cast<uint8_t>(std::max(1, std::min(cq, 255)));
     }
 }
+
 
 void IMPEncoder::initProfile(IMPEncoderCHNAttr *chnAttr, IMPEncoderRcAttr *rcAttr)
 {
@@ -235,7 +238,7 @@ LOG_DEBUG("initProfile:  start.");
     chnAttr->encAttr.picHeight = stream->height;
     chnAttr->rcAttr.outFrmRate.frmRateNum = stream->fps;
     chnAttr->rcAttr.outFrmRate.frmRateDen = 1;
-    rcAttr->maxGop = stream->max_gop;
+    rcAttr->maxGop =  (stream->fps << 1) / chnAttr->rcAttr.outFrmRate.frmRateDen;              // stream->max_gop;
 
     if (chnAttr->encAttr.enType == PT_H264)
     {
@@ -272,12 +275,13 @@ LOG_DEBUG("initProfile:  start.");
         case ENC_RC_MODE_SMART:
             rcAttr->attrRcMode.rcMode = ENC_RC_MODE_SMART;
             rcAttr->attrRcMode.attrH264Smart.maxQp = 45;
-            rcAttr->attrRcMode.attrH264Smart.minQp = 15; //24;
-            rcAttr->attrRcMode.attrH264Smart.staticTime = 2;
-            rcAttr->attrRcMode.attrH264Smart.maxBitRate = stream->bitrate;
-            rcAttr->attrRcMode.attrH264Smart.iBiasLvl = 0;
-            rcAttr->attrRcMode.attrH264Smart.changePos = 80;
-            rcAttr->attrRcMode.attrH264Smart.qualityLvl = 2;
+            rcAttr->attrRcMode.attrH264Smart.minQp = 32; // 15; //24;
+            rcAttr->attrRcMode.attrH264Smart.staticTime = 4;  // 2;
+//            rcAttr->attrRcMode.attrH264Smart.maxBitRate = stream->bitrate;
+            rcAttr->attrRcMode.attrH264Smart.maxBitRate = 300000;  // xx;
+            rcAttr->attrRcMode.attrH264Smart.iBiasLvl = 0XFFFFFFFD;  // 0;
+            rcAttr->attrRcMode.attrH264Smart.changePos = 50;  // 80;
+            rcAttr->attrRcMode.attrH264Smart.qualityLvl = 5; // 2;
             rcAttr->attrRcMode.attrH264Smart.frmQPStep = 3;
             rcAttr->attrRcMode.attrH264Smart.gopQPStep = 15;
             rcAttr->attrRcMode.attrH264Smart.gopRelation = false;
@@ -303,16 +307,25 @@ LOG_DEBUG("initProfile:  start.");
     #endif //defined(PLATFORM_T30)
     }
 
+    rcAttr->attrFrmUsed.enable = false;
+    rcAttr->attrFrmUsed.frmUsedMode = ENC_FRM_BYPASS;  // bypass, reuse, skip
+    rcAttr->attrFrmUsed.frmUsedTimes = 1;
+
+    rcAttr->attrDenoise.enable = false;
+    rcAttr->attrDenoise.dnType = 0;
+    rcAttr->attrDenoise.dnIQp = 0;
+    rcAttr->attrDenoise.dnPQp = 0;
+
     // Optional overrides via HAL (legacy platforms)
     hal::apply_rc_overrides(*chnAttr, rcMode, *stream);
 
-    rcAttr->attrHSkip.hSkipAttr.skipType = IMP_Encoder_STYPE_N1X;
-    rcAttr->attrHSkip.hSkipAttr.m = 0;  //rcAttr->maxGop - 1;
-    rcAttr->attrHSkip.hSkipAttr.n = 0;  //1;
-    rcAttr->attrHSkip.hSkipAttr.maxSameSceneCnt = 0;
+    rcAttr->attrHSkip.hSkipAttr.skipType = IMP_Encoder_STYPE_HN1_FALSE;  //IMP_Encoder_STYPE_N1X;
+    rcAttr->attrHSkip.hSkipAttr.m = rcAttr->maxGop -1;  // 0;  //rcAttr->maxGop - 1;
+    rcAttr->attrHSkip.hSkipAttr.n = 1;  // 0;  //1;
+    rcAttr->attrHSkip.hSkipAttr.maxSameSceneCnt = 1; // 0;
     rcAttr->attrHSkip.hSkipAttr.bEnableScenecut = 0;
     rcAttr->attrHSkip.hSkipAttr.bBlackEnhance = 0;
-    rcAttr->attrHSkip.maxHSkipType = IMP_Encoder_STYPE_N1X;
+    rcAttr->attrHSkip.maxHSkipType = IMP_Encoder_STYPE_HN1_FALSE; //IMP_Encoder_STYPE_N1X;
 #endif //defined(PLATFORM_T10) || defined(PLATFORM_T20) || defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T30)
     LOG_DEBUG("STREAM PROFILE " <<
         stream->rtsp_endpoint << ", " <<
@@ -328,12 +341,12 @@ LOG_DEBUG("initProfile:  start.");
  /* Video channels 
  * (encChn) (chnNr)                (encChn)      (cfg->)   (stream)   
  * video   framesource    group    encoder       sensor    format   
- *  ch 0:  framesource 0, group 0, encoder ch 0, sensor 0, H264,     
- *  ch 1:  framesource 3, group 1, encoder ch 1, sensor 1, H264,    
- *  ch 2:  framesource 2, group 0, encoder ch 2, sensor 0, JPEG,    
- *  ch 3:  framesource 5, group 1, encoder ch 3, sensor 1, JPEG,    
- *  ch 4:  framesource 1, group 2, encoder ch 4, sensor 0, H264,     
- *  ch 5:  framesource 4, group 3, encoder ch 5, sensor 1, H264,     
+ *  ch 0:  framesource 0, group 0, encoder ch 0, sensor 0, H264,     0
+ *  ch 1:  framesource 3, group 1, encoder ch 1, sensor 1, H264,     1
+ *  ch 2:  framesource 0, group 0, encoder ch 2, sensor 0, JPEG,     2
+ *  ch 3:  framesource 3, group 1, encoder ch 3, sensor 1, JPEG,     3
+ *  ch 4:  framesource 1, group 2, encoder ch 4, sensor 0, H264,     4
+ *  ch 5:  framesource 4, group 3, encoder ch 5, sensor 1, H264,     5
  */
 
 int IMPEncoder::init()
@@ -342,7 +355,6 @@ int IMPEncoder::init()
     IMPEncoderRcAttr *rcAttr;
     memset(&chnAttr, 0, sizeof(IMPEncoderCHNAttr));
     rcAttr = &chnAttr.rcAttr;
-    int fsChnNum;
 
     LOG_DEBUG("IMPEncoder::init(" << encChn << ", " << encGrp << ")");
 
@@ -357,49 +369,6 @@ int IMPEncoder::init()
         LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "maybe_enable_bufshare(2, " << encChn << ")");
     }
 #endif
-
-// duale sensors, direct_mode match
-		switch (encChn) {
-			case 0:  /* main-sensor 0 h264 or h265 */
-				encChn = 0;
-                encGrp = 0;
-                fsChnNum = 0;
-				chnAttr.bEnableIvdc = cfg->stream0.direct_mode;
-				break;
-			case 1:  /* main-sensor 1 h264 or h265 */
-				encChn = 1;
-                encGrp = 1;
-                fsChnNum = 3;
-				chnAttr.bEnableIvdc = cfg->stream1.direct_mode;
-				break;
-			case 2:  /* main-sensor 0 jpeg*/
-				encChn = 2;
-				encGrp = 0;
-                fsChnNum = 0;
-				chnAttr.bEnableIvdc = false;
-				break;
-			case 3:  /* main-sensor 1 jpeg*/
-				encChn = 3;
-				encGrp = 1;
-                fsChnNum = 3;
-				chnAttr.bEnableIvdc = false;
-				break;
-			case 4:  /* sub-sensor 0, no direct mode */
-				encChn = 4;
-				encGrp = 2;
-                fsChnNum = 1;
-				chnAttr.bEnableIvdc = false;
-				break;
-			case 5:  /* sub-sensor 1, no direct mode */
-				encChn = 5;
-				encGrp = 3;
-                fsChnNum = 4;
-				chnAttr.bEnableIvdc = false;
-				break;
-			default:
-				LOG_DEBUG("unsupported encChn: " <<  encChn);
-				return -1;
-		}
 
     LOG_DEBUG("Encoder init:  Group: " << encGrp << " Channel: " << encChn << " Direct mode: " << (chnAttr.bEnableIvdc ? "True" : "False"));
 
@@ -416,46 +385,11 @@ int IMPEncoder::init()
 
     if (strcmp(stream->format, "JPEG") != 0)
     {
-        fs = {DEV_ID_FS, fsChnNum, 0};
-        enc = {DEV_ID_ENC, encChn, 0};
-        osd_cell = {DEV_ID_OSD, encGrp, 0};
-
         if (stream->osd.enabled)
         {
             osd = OSD::createNew(stream->osd, encGrp, encChn, name);
-
-            ret = IMP_System_Bind(&fs, &osd_cell);
-            LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&fs, &osd_cell)");
-
-            ret = IMP_System_Bind(&osd_cell, &enc);
-            LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&osd_cell, &enc)");
-        }
-        else
-        {
-            ret = IMP_System_Bind(&fs, &enc);
-            LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&fs, &enc)");
         }
     }
-#if !(defined(PLATFORM_T31) || !defined(PLATFORM_C100) || !defined(PLATFORM_T40) || !defined(PLATFORM_T41))
-    else  // JPEG
-    {
-        IMPEncoderJpegeQl pstJpegeQl;
-        // fix for bad jpeg image quality on T10 based cameras
-        if (strncmp(cfg->sysinfo.cpu, "T10", 3)==0)
-        {
-            pstJpegeQl.user_ql_en = 0;
-            LOG_DEBUG("JPEG use default quantization table");
-        }
-        else
-        {
-            MakeTables(stream->jpeg_quality, &(pstJpegeQl.qmem_table[0]), &(pstJpegeQl.qmem_table[64]));
-            pstJpegeQl.user_ql_en = 1;
-            LOG_DEBUG("JPEG use custom user quantization table");
-        }
-
-        IMP_Encoder_SetJpegeQl(2, &pstJpegeQl);
-    }
-#endif
 
     return ret;
 }
