@@ -1,5 +1,5 @@
 #include "JPEGWorker.hpp"
-
+#include "IMPEncoder.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
 #include "WorkerUtils.hpp"
@@ -282,7 +282,9 @@ void *JPEGWorker::thread_entry(void *arg)
 
     StartHelper *sh = static_cast<StartHelper *>(arg);
     int jpgChn = sh->encChn - 2;
+    int encGrp = sh->encGrp;
     int ret;
+    LOG_DEBUG("JPEGWorker Stream/encoder chn: " << jpgChn << " Group: " << encGrp);  
 
     /* do not use the live config variable
     */
@@ -301,8 +303,26 @@ void *JPEGWorker::thread_entry(void *arg)
 
     global_jpeg[jpgChn]->imp_encoder = IMPEncoder::createNew(global_jpeg[jpgChn]->stream,
                                                              sh->encChn,
-                                                             global_jpeg[jpgChn]->streamChn,
-                                                             "stream2");
+                                                             sh->encGrp,
+                                                             ("stream"+std::to_string(encChn)).c_str());
+
+#if !(defined(PLATFORM_T31) || !defined(PLATFORM_C100) || !defined(PLATFORM_T40) || !defined(PLATFORM_T41))
+        IMPEncoderJpegeQl pstJpegeQl;
+        // fix for bad jpeg image quality on T10 based cameras
+        if (strncmp(cfg->sysinfo.cpu, "T10", 3)==0)
+        {
+            pstJpegeQl.user_ql_en = 0;
+            LOG_DEBUG("JPEG use default quantization table");
+        }
+        else
+        {
+            MakeTables(global_jpeg[jpgChn]->stream.jpeg_quality, &(pstJpegeQl.qmem_table[0]), &(pstJpegeQl.qmem_table[64]));
+            pstJpegeQl.user_ql_en = 1;
+            LOG_DEBUG("JPEG use custom user quantization table");
+        }
+
+        IMP_Encoder_SetJpegeQl(2, &pstJpegeQl);
+#endif
 
     // inform main that initialization is complete
     sh->has_started.release();
