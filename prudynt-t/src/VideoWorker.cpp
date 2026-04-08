@@ -7,6 +7,7 @@
 #include "WorkerUtils.hpp"
 #include "globals.hpp"
 #include "imp_hal.hpp"
+#include "OSD.hpp"
 
 #undef MODULE
 #define MODULE "VideoWorker"
@@ -254,59 +255,55 @@ void *VideoWorker::thread_entry(void *arg)
 {
     StartHelper *sh = static_cast<StartHelper *>(arg);
     int encChn = sh->encChn;
-    int encGrp;
-    int fsChnNum;
+    int encGrp = sh->encGrp;
+    int fsChnNum = sh->fsChnNum;
 
     LOG_DEBUG("Start stream_grabber thread for stream " << encChn);
+    LOG_DEBUG("VideoWorker Stream/encoder chn: " << encChn << " Group: " << encGrp << " Framesource:  " << fsChnNum);
 
     int ret;
-// dual sensors:  set group and channels
-		switch (encChn) {
-			case 0:  /* main-sensor 0 h264 or h265 */
-				encChn = 0;
-                encGrp = 0;
-                fsChnNum = 0;
-				break;
-			case 1:  /* main-sensor 1 h264 or h265 */
-				encChn = 1;
-                encGrp = 1;
-                fsChnNum = 3;
-				break;
-			case 2:  /* main-sensor 0 jpeg, not used here */
-				encChn = 2;
-				encGrp = 0;
-                fsChnNum = 02;
-				break;
-			case 3:  /* main-sensor 1 jpeg, not used here */
-				encChn = 3;
-				encGrp = 1;
-                fsChnNum = 3;
-				break;
-			case 4:  /* sub-sensor 0, no direct mode */
-				encChn = 4;
-				encGrp = 2;
-                fsChnNum = 1;
-				break;
-			case 5:  /* sub-sensor 1, no direct mode */
-				encChn = 5;
-				encGrp = 3;
-                fsChnNum = 4;
-				break;
-			default:
-				LOG_DEBUG("unsupported encChn: " <<  encChn);
-				return 0;
-		}
-
-        global_video[encChn]->imp_framesource = IMPFramesource::createNew(global_video[encChn]->stream,
+    global_video[encChn]->imp_framesource = IMPFramesource::createNew(global_video[encChn]->stream,
                                                                       &cfg->sensor,  // need to move, add to global_video
                                                                       fsChnNum);
-        global_video[encChn]->imp_encoder = IMPEncoder::createNew(global_video[encChn]->stream,
+    global_video[encChn]->imp_encoder = IMPEncoder::createNew(global_video[encChn]->stream,
                                                               encChn,
                                                               encGrp,
                                                               global_video[encChn]->name);
-        global_video[encChn]->imp_framesource->enable();
-        global_video[encChn]->run_for_jpeg = false;
+    global_video[encChn]->run_for_jpeg = false;
 
+    _stream *stream = global_video[encChn]->stream;
+    if (strcmp(stream->format, "JPEG") != 0)
+    {
+        int ret = 0;
+        IMPCell fs{};
+        IMPCell enc{};
+        IMPCell osd_cell{};
+        OSD *osd = nullptr;
+
+        fs = {DEV_ID_FS, fsChnNum, 0};
+        enc = {DEV_ID_ENC, encChn, 0};
+        osd_cell = {DEV_ID_OSD, encGrp, 0};
+
+        if (stream->osd.enabled)
+        {
+
+            ret = IMP_System_Bind(&fs, &osd_cell);
+            //LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&fs, &osd_cell)");
+            LOG_DEBUG_OR_ERROR(ret, "IMP_System_Bind-fs->osd(" << fsChnNum << "," << encGrp << ")");
+
+            ret = IMP_System_Bind(&osd_cell, &enc);
+            //LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&osd_cell, &enc)");
+            LOG_DEBUG_OR_ERROR(ret, "IMP_System_Bind->osd->enc(" <<encGrp << "," <<  encChn << ")");
+        }
+        else
+        {
+            ret = IMP_System_Bind(&fs, &enc);
+            //LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&fs, &enc)");
+            LOG_DEBUG_OR_ERROR(ret, "IMP_System_Bind-fs->enc(" << fsChnNum << "," << encChn << ")");
+        }
+    }
+
+    global_video[encChn]->imp_framesource->enable();
     // inform main that initialization is complete
     sh->has_started.release();
 
