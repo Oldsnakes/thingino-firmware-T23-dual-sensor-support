@@ -76,9 +76,9 @@ bool timesync_wait()
     return true;
 }
 
-void start_video(int encChn)
+void start_video(int encChn, int encGrp, int fsChnNum)
 {
-    StartHelper sh{encChn};
+    StartHelper sh{encChn, encGrp, fsChnNum};
     int ret = pthread_create(&global_video[encChn]->thread, nullptr, VideoWorker::thread_entry, static_cast<void *>(&sh));
     LOG_DEBUG_OR_ERROR(ret, "create video["<< encChn << "] thread");
 
@@ -204,41 +204,41 @@ int main(int argc, const char *argv[])
             sh.has_started.acquire();
         }
 #endif
-        // stream follow encoder
+        // stream follow encoder  start_video(int encChn, int encGrp, int fsChnNum)
         if (global_restart_video || startup)
         {
             LOG_INFO("Start VIDEO streams.");
             if (cfg->stream0.enabled)
             {
                 LOG_DEBUG("stream 0 enabled");
-                start_video(0);
+                start_video(0, 0 , 0);
             } else {
                 LOG_DEBUG("stream 0 disabled");
             }
             if (cfg->stream1.enabled)
             {
                 LOG_DEBUG("stream 1 enabled");
-                start_video(1);
+                start_video(1, 1, 3);
             } else {
                 LOG_DEBUG("stream 1 disabled");
             }
             if (cfg->stream4.enabled)
             {
                 LOG_DEBUG("stream 4 enabled");
-                start_video(4);
+                start_video(4, 2, 1);
             } else {
                 LOG_DEBUG("stream 4 disabled");
             }
             if (cfg->stream5.enabled)
             {
                 LOG_DEBUG("stream 5 enabled");
-                start_video(5);
+                start_video(5, 3, 4);
             } else {
                 LOG_DEBUG("stream 5 disabled");
             }
             if (cfg->stream2.enabled) 
             {
-                StartHelper sh{2};
+                StartHelper sh{encChn:2, encGrp:0};
                 LOG_DEBUG("stream 2 (jpeg) enabled");
                 int ret = pthread_create(&global_jpeg[0]->thread, nullptr, JPEGWorker::thread_entry, static_cast<void *>(&sh));
                 LOG_DEBUG_OR_ERROR(ret, "create jpeg thread 0");
@@ -250,7 +250,7 @@ int main(int argc, const char *argv[])
 
             if (cfg->stream3.enabled)  
             {
-                StartHelper sh2{3};
+                StartHelper sh2{encChn:3, encGrp:1};
                 LOG_DEBUG("stream 3 (jpeg) enabled");
                 int ret2 = pthread_create(&global_jpeg[1]->thread, nullptr, JPEGWorker::thread_entry, static_cast<void *>(&sh2));
                 LOG_DEBUG_OR_ERROR(ret2, "create mjpeg/jpeg thread 1");
