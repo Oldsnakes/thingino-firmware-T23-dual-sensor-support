@@ -10,8 +10,10 @@
 struct StartHelper
 {
     int encChn;
+    int encGrp;
+    int fsChnNum;
     int MipiMode = 0;
-    uint32_t Time_interval = 2000;
+//    uint32_t Time_interval = 2000;
     std::binary_semaphore has_started{0};
 };
 
