@@ -296,7 +296,7 @@ int main(int argc, const char *argv[])
         usleep(250000 + (cfg->stream0.osd.start_delay * 1000) + cfg->stream1.osd.start_delay * 1000);
 
         LOG_DEBUG("main thread is go into sleep-loop....zzz");
-        std::unique_lock lck(mutex_main);
+//        std::unique_lock lck(mutex_main);
 
         startup = false;
         global_restart = false;
@@ -307,9 +307,9 @@ int main(int argc, const char *argv[])
         while (!global_restart_rtsp && !global_restart_video && !global_restart_audio && !global_restart_motion) 
         {
             sleep(1);
-            global_cv_worker_restart.wait(lck);
+//            global_cv_worker_restart.wait(lck);
         }
-        lck.unlock();
+//        lck.unlock();
 
         global_restart = true;
         if (global_restart_rtsp)
