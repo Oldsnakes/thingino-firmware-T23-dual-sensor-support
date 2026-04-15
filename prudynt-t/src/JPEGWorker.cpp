@@ -304,7 +304,7 @@ void *JPEGWorker::thread_entry(void *arg)
     global_jpeg[jpgChn]->imp_encoder = IMPEncoder::createNew(global_jpeg[jpgChn]->stream,
                                                              sh->encChn,
                                                              sh->encGrp,
-                                                             ("stream"+std::to_string(encChn)).c_str());
+                                                             ("stream"+std::to_string(sh->encChn)).c_str());
 
 #if !(defined(PLATFORM_T31) || !defined(PLATFORM_C100) || !defined(PLATFORM_T40) || !defined(PLATFORM_T41))
         IMPEncoderJpegeQl pstJpegeQl;
