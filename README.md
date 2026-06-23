@@ -1,4 +1,4 @@
-3/31/2026
+6/23/2026
 
 This project is based on the wonderful work by team of thingino-firmware and Prudynt-T. Some features been added to the Prudynt-T and WebUI for my own experiment.
 
@@ -14,7 +14,7 @@ Features:
 - Add auto tracking to PTZ camera and allows turning on white light when motion is detected.
 - Add seperate controls in WebUI to change sensors setting individually, or both.
 - Integrate daynight sensing to Prudynt-T.
-- Add variable digital zoom for each sensor, up to 2.5x.  
+- Add variable digital zoom for each sensor, up to 2.5x. 
 
 <img width="458" height="535" alt="config-streamer-dual" src="https://github.com/user-attachments/assets/e96c9db7-0013-4a9f-bd07-2b4980a8556b" />
 
