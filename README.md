@@ -13,8 +13,11 @@ Features:
 - Integrate Motor control to interface with motor-daemon for faster response.
 - Add auto tracking to PTZ camera and allows turning on white light when motion is detected.
 - Add seperate controls in WebUI to change sensors setting individually, or both.
+- Integrate daynight sensing to Prudynt-T.
+- Add variable digital zoom for each sensor, up to 2.5x.  
 
 ![config-streamer-dual-common-1](https://github.com/user-attachments/assets/119085eb-f1d3-4d3f-8485-3e0952887eef)
-![config-streamer-dual-stream](https://github.com/user-attachments/assets/fbac7f26-6347-4057-b423-1a53eef4aa15)
+<img width="458" height="535" alt="config-streamer-dual" src="https://github.com/user-attachments/assets/e96c9db7-0013-4a9f-bd07-2b4980a8556b" />
+
 ![service-motion-map](https://github.com/user-attachments/assets/1d25a4b6-20cd-46fe-a0c5-3ee2d687f9d0)
 
