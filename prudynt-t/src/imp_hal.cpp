@@ -7,6 +7,8 @@
 #include <dlfcn.h>
 #include <imp/imp_isp.h>
 #include "Motor.hpp"
+#include "Motion.hpp"
+#include "IMPFramesource.hpp"
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -606,6 +608,8 @@ int set_drc_strength(unsigned char val)
     }
     int ret = 0;
 #if defined(PLATFORM_T23) 
+    ret += IMP_ISP_Tuning_EnableDRC(IMPISP_TUNING_OPS_MODE_ENABLE);
+    ret += IMP_ISP_Tuning_EnableDRC_Sec(IMPISP_TUNING_OPS_MODE_ENABLE);
     if (cfg->sensor.select & 0x2) ret += IMP_ISP_Tuning_SetDRC_Strength_Sec(val);
     if (cfg->sensor.select & 0x1) ret += IMP_ISP_Tuning_SetDRC_Strength(val); 
     return ret;
@@ -715,6 +719,7 @@ int set_max_dgain(unsigned char val)
 #endif
 }
 
+
 int set_alt_sensor(bool enable)
 {
     int ret = 0;
@@ -764,25 +769,29 @@ void touch_AE_AGain()
     ret = IMP_ISP_Tuning_SetMaxAgain_Sec(ret_val);
 }
 
-int set_core_expr_mode(bool enable)
+void ae_status()
 {
     int ret = 0;
-    unsigned int ret_val;
-    int ret_val1;
+    unsigned int ret_val, ret_val_sec;
+    int ret_val1, ret_val1_sec;
 
     LOG_DEBUG("  ********  AE status ********");
 //    ret += IMP_ISP_Tuning_GetAE_IT_MAX(&ret_val);
 //    LOG_DEBUG("IMP_ISP_Tuning_GetAE_IT_MAX     " << ret_val);
 //    ret += IMP_ISP_Tuning_GetAE_IT_MAX_Sec(&ret_val);
 //    LOG_DEBUG("IMP_ISP_Tuning_GetAE_IT_MAX_Sec " << ret_val);
-    ret += IMP_ISP_Tuning_GetAeComp(&ret_val1);
-    LOG_DEBUG("IMP_ISP_Tuning_GetAeComp     " << ret_val1);
-    ret += IMP_ISP_Tuning_GetAeComp_Sec(&ret_val1);
-    LOG_DEBUG("IMP_ISP_Tuning_GetAeComp_Sec " << ret_val1);
+//    ret += IMP_ISP_Tuning_GetAeComp(&ret_val1);
+//    LOG_DEBUG("IMP_ISP_Tuning_GetAeComp     " << ret_val1);
+//    ret += IMP_ISP_Tuning_GetAeComp_Sec(&ret_val1);
+//    LOG_DEBUG("IMP_ISP_Tuning_GetAeComp_Sec " << ret_val1);
+    ret += IMP_ISP_Tuning_GetTotalGain(&ret_val);
+//    LOG_DEBUG("IMP_ISP_Tuning_GetTotalGain     " << ret_val);
+    ret += IMP_ISP_Tuning_GetTotalGain_Sec(&ret_val_sec);
+    LOG_DEBUG("IMP_ISP_Tuning_GetTotalGain " << ret_val << "," << ret_val_sec);
     ret += IMP_ISP_Tuning_GetAeLuma(&ret_val1);
-    LOG_DEBUG("IMP_ISP_Tuning_GetAeLuma     " << ret_val1);
-    ret += IMP_ISP_Tuning_GetAeLuma_Sec(&ret_val1);
-    LOG_DEBUG("IMP_ISP_Tuning_GetAeLuma_Sec " << ret_val1);
+//    LOG_DEBUG("IMP_ISP_Tuning_GetAeLuma     " << ret_val1);
+    ret += IMP_ISP_Tuning_GetAeLuma_Sec(&ret_val1_sec);
+    LOG_DEBUG("IMP_ISP_Tuning_GetAeLuma " << ret_val1<< "," << ret_val1_sec);
 //    IMPISPTuningOpsMode mode;
 //    ret += IMP_ISP_Tuning_GetISPCustomMode(&mode);
 //    LOG_DEBUG("IMP_ISP_Tuning_GetISPCustomMode     " << ((mode == IMPISP_TUNING_OPS_MODE_ENABLE)? "Enable":"Disable"));
@@ -798,10 +807,10 @@ int set_core_expr_mode(bool enable)
     LOG_DEBUG("IMP_ISP_Tuning_GetEVAttr_Sec: ev = " << attr.ev << "(" << attr.expr_us << ")-(" << attr.ev_log2 
         << "), again = " << attr.again << " dgain = " << attr.dgain << "=>(" << attr.gain_log2 << ")");
 
+#if 0
     IMPISPAEAttr ae;
     memset(&ae, 0, sizeof(IMPISPAEAttr));
     ret += IMP_ISP_Tuning_GetAeAttr(&ae);
-
     LOG_DEBUG("IMP_ISP_Tuning_GetAeAttr    : AeFreezenEn = " << (ae.AeFreezenEn? "Enable":"Disable") 
         << ", AeItManualEn = " << (ae.AeItManualEn? "Enable":"Disable") 
         << ", AeIt = " << ae.AeIt );
@@ -834,10 +843,14 @@ int set_core_expr_mode(bool enable)
     ret += IMP_ISP_Tuning_GetAeMin_Sec(&ae_min);
     LOG_DEBUG("IMP_ISP_Tuning_GetAeMin_Sec: min_it = " << ae_min.min_it << ", min_again = " << ae_min.min_again
         << " min_it_short = " << ae_min.min_it_short << ", min_again_short = " << ae_min.min_again_short);
-
+#endif
     LOG_DEBUG("  *****************************");
-    
+}
+
+int set_core_expr_mode(bool enable)
+{
     IMPISPExpr expr;
+    int ret;
     memset(&expr, 0, sizeof(IMPISPExpr));                    
     ret = IMP_ISP_Tuning_GetExpr(&expr);
     LOG_DEBUG("IMP_ISP_Tuning_GetExpr    : g_attr.mode = " << (expr.g_attr.mode? "Enable":"Disable") << ", g_attr.time = " << expr.g_attr.integration_time);
@@ -848,16 +861,17 @@ int set_core_expr_mode(bool enable)
     if (cfg->sensor.select & 0x2) ret += IMP_ISP_Tuning_SetExpr_Sec(&expr);
     if (cfg->sensor.select & 0x1) ret += IMP_ISP_Tuning_SetExpr(&expr) + ret; 
     touch_AE_AGain();
-    return ret;
 #else
     ret = IMP_ISP_Tuning_SetExpr_Sec(&expr);
     ret = IMP_ISP_Tuning_SetExpr(&expr) + ret;
-    return ret;
 #endif
+    return ret;
 }
 
 int set_again_gain(unsigned int val)
 {
+    ae_status();  // debug
+
     IMPISPAEAttr ae;
     int ret = 0;
     memset(&ae, 0, sizeof(IMPISPAEAttr));
@@ -910,6 +924,178 @@ int set_core_expr_time(unsigned int val)
 #endif
 }
 
+int set_zoom_enable(bool enable)
+{
+    LOG_DEBUG("image: zoom enable <== sensor.select " << cfg->get<int>("sensor.select"));
+    switch (cfg->get<int>("sensor.select")) {
+        case 1: // sensor 0 (cam 1)
+            set_FramesourceAttr(enable, 0);
+            break;
+        case 2: // sensor 1 (cam 2)
+            set_FramesourceAttr(enable, 1);
+            break;
+        case 3: // both sensor
+            set_FramesourceAttr(enable, 0);
+            set_FramesourceAttr(enable, 1);
+            break;
+        default:
+            LOG_DEBUG("Invalid image config request: " << cfg->get<int>("sensor.select"));
+            break;
+    }
+
+    return 0;
+}
+
+int set_FramesourceAttr(bool enable, int sensor)
+{
+    int ret = 0, scale = 0;
+    double zoom_factor;
+    int chnNr = 0;
+
+    _stream *stream;
+    _image *image;
+
+    if (sensor == 0) {
+        chnNr = 0;
+        stream = &cfg->stream0;
+        image = &cfg->image0;
+    } else if (sensor == 1) {
+        {
+            chnNr = 3;
+            stream = &cfg->stream1;
+            image = &cfg->image1;
+        }
+    } else return -1;
+
+    IMPFSChnAttr chnAttr;
+    memset(&chnAttr, 0, sizeof(IMPFSChnAttr));
+    IMPFSChnAttr chnAttr_r;  // readback
+    memset(&chnAttr_r, 0, sizeof(IMPFSChnAttr));
+
+    ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr);
+    LOG_DEBUG("* Read Channel " << chnNr << " configuration current setting:");
+    LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
+    LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
+    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
+    LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
+    LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
+    LOG_DEBUG("  fps=" << chnAttr_r.outFrmRateNum << "/" << chnAttr_r.outFrmRateDen << " nrVBs=" << chnAttr_r.nrVBs << " pixFmt=" << chnAttr.pixFmt);
+
+    if (enable) {
+//        chnAttr.crop.enable = image->crop_enable;
+        chnAttr.crop.enable = 1;
+        chnAttr.crop.top = image->crop_top;
+        chnAttr.crop.left = image->crop_left;
+        chnAttr.crop.width = stream->width;
+        chnAttr.crop.height = stream->height;
+
+//        chnAttr.scaler.enable = image->scaler_enable;
+        chnAttr.scaler.enable = 1;
+        chnAttr.picWidth = stream->width;
+        chnAttr.picHeight = stream->height;
+
+        double fw, fh;
+        fw = (double) stream->width / image->crop_width;
+        fh = (double) stream->height / image->crop_height;
+
+        if (fw > fh) zoom_factor = fh;
+        else zoom_factor = fw;
+
+        LOG_DEBUG("-- Zoom factors:  zoom = " << zoom_factor << " (fw = " << fw << " fh = " << fh << ")");
+        // zoom is limited by scale dim at 3200x1800 / 1280x720
+        if (zoom_factor > 2.5) zoom_factor = 2.5;
+        if (zoom_factor < 1) zoom_factor = 1; 
+
+        chnAttr.scaler.outwidth = (int) (stream->width * zoom_factor);
+        chnAttr.scaler.outheight = (int) (stream->height * zoom_factor);
+        chnAttr.crop.left *= zoom_factor;
+        chnAttr.crop.top *= zoom_factor;
+    } else 
+    {
+        chnAttr.crop.enable = 0;
+        chnAttr.scaler.enable = 0;
+        chnAttr.crop.top = image->crop_top;
+        chnAttr.crop.left = image->crop_left;
+        chnAttr.crop.width = stream->width;
+        chnAttr.crop.height = stream->height;
+        chnAttr.scaler.outwidth = stream->width;
+        chnAttr.scaler.outheight = stream->height;
+        chnAttr.picWidth = stream->width;
+        chnAttr.picHeight = stream->height;
+    }
+
+    chnAttr.crop.width &= ~15; // 16 pixel boundary
+    chnAttr.crop.height &= ~15; // 16 pixel boundary
+    chnAttr.scaler.outwidth &= ~15; // 16 pixel boundary
+    chnAttr.scaler.outheight &= ~15; // 16 pixel boundary
+    chnAttr.crop.left &= ~1; // 2 pixel boundary
+    chnAttr.crop.top &= ~1; // 2 pixel boundary
+
+    if ((chnAttr.crop.left + chnAttr.crop.width) > chnAttr.scaler.outwidth)
+        chnAttr.crop.left = chnAttr.scaler.outwidth - chnAttr.crop.width;
+    if ((chnAttr.crop.top + chnAttr.crop.height) > chnAttr.scaler.outheight)
+        chnAttr.crop.top = chnAttr.scaler.outheight - chnAttr.crop.height;
+
+    if (chnAttr.crop.left <= 0) chnAttr.crop.left = 0;
+    if (chnAttr.crop.top <= 0) chnAttr.crop.top = 0;
+
+    chnAttr.crop.left &= ~1; // 2 pixel boundary
+    chnAttr.crop.top &= ~1; // 2 pixel boundary
+
+    image->crop_left = chnAttr.crop.left / zoom_factor;
+    image->crop_top = chnAttr.crop.top / zoom_factor;
+    
+    image->crop_width = chnAttr.crop.width;
+    image->crop_height = chnAttr.crop.height;
+    image->scaler_outwidth = chnAttr.scaler.outwidth;
+    image->scaler_outheight = chnAttr.scaler.outheight;
+
+    image->zoom_factor = zoom_factor;
+
+    LOG_DEBUG("-> Set to Channel " << chnNr << " configuration (conf-attr):");
+    LOG_DEBUG("  pic: " << chnAttr.picWidth << "x" << chnAttr.picHeight);
+    LOG_DEBUG("  crop.enable=" << chnAttr.crop.enable << " crop=" << chnAttr.crop.width << "x" << chnAttr.crop.height);
+    LOG_DEBUG("  scaled Attr pos <-" << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
+    LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
+    LOG_DEBUG("  scaler.enable=" << chnAttr.scaler.enable << " ext=" << chnAttr.scaler.outwidth << "x" << chnAttr.scaler.outheight << 
+                    "(x" << zoom_factor << ")");
+
+//    LOG_DEBUG("Channel " << chnNr << " ready to change attribute for zoom.");
+    // need to enable first then change zoom settings
+        ret = IMP_FrameSource_DisableChn(chnNr);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_DisableChn(" << chnNr << ")");
+    usleep(10000);
+    // enable 
+#if 1
+        ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
+    LOG_DEBUG_OR_ERROR(ret, "* * IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
+#endif
+        ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
+    LOG_DEBUG("@ Read Channel " << chnNr << " configuration Read back:");
+    LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
+    LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
+    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
+    LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
+    // set new zoom
+    usleep(10000);
+#if 1
+        ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
+    LOG_DEBUG_OR_ERROR(ret, "*** IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
+#endif
+    ret = IMP_FrameSource_EnableChn(chnNr);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_EnableChn(" << chnNr << ")");
+
+    usleep(10000);
+        ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
+    LOG_DEBUG("@ Read Channel " << chnNr << " configuration Read back:");
+    LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
+    LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
+    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
+   LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
+
+    return ret;
+}
+
 // GPIO
 bool set_gpio(std::string gpio_name, bool enable)
 {
@@ -924,10 +1110,7 @@ bool get_gpio(std::string gpio_name)
 {
     if (gpio_name == "ircut") {
         return ctrls_hal::getIRCUT();
-    } else if (gpio_name == "daynight") {
-        ctrls_hal::getDAYNIGHT();
-    }
-    return ctrls_hal::getGPIObyName(gpio_name);
+    } else return ctrls_hal::getGPIObyName(gpio_name);
 }
 
 int set_ircut(bool enable)
@@ -936,9 +1119,28 @@ int set_ircut(bool enable)
     return 0;
 }
 
-int set_daynight(bool enable)
-{
-    ctrls_hal::setDAYNIGHT(enable);
+// motor move from idx tile to center tile
+int center_tile(int idx) {
+    int x, y;
+    x = ((idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * MAP_DX;
+    y = ((idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * MAP_DY;
+
+    LOG_DEBUG("track to rel: " << x << "," << y);
+    char cmd;
+    int value = 0;
+    cmd = MOTOR_X_POS;
+    value = x;
+    Motor::motor_action(cmd,value);
+    cmd = MOTOR_Y_POS;
+    value = y;
+    Motor::motor_action(cmd,value);
+    cmd = MOTOR_DIR;
+    value = MOTOR_REL_POS;
+    Motor::motor_action(cmd,value);
+    usleep(500000);
+    cmd = MOTOR_STATUS;
+    value = 0;
+    Motor::motor_action(cmd,value);
     return 0;
 }
 
@@ -951,14 +1153,31 @@ int set_wb(int mode, unsigned short rgain, unsigned short bgain)
     LOG_DEBUG("set_wb: T40 WB API differs - needs implementation");
     return 0; // TODO: implement T40 WB using IMPISPWBAttr
 #else
+    int ret = 0;
     IMPISPWB wb;
-    int ret;
     memset(&wb, 0, sizeof(IMPISPWB));
 
+#if 0
+    IMPISPAWBCluster awb_cluster;
+    memset(&awb_cluster, 0, sizeof(IMPISPAWBCluster));
+    ret = IMP_ISP_Tuning_GetAwbClust(&awb_cluster);
+    LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetAwbClust enable = " << (awb_cluster.ClusterEn? "Enable":"Disable") << " ret = " << ret);
+    awb_cluster.ClusterEn = IMPISP_TUNING_OPS_MODE_DISABLE;
+    ret = IMP_ISP_Tuning_GetAwbClust(&awb_cluster);
+    ret = IMP_ISP_Tuning_GetWB_Statis(&wb);
+    LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetWB_Statis mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
+    ret = IMP_ISP_Tuning_GetWB_Statis_Sec(&wb);
+    LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetWB_Statis_Sec mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
+    ret = IMP_ISP_Tuning_GetWB_GOL_Statis(&wb);
+    LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetWB_GOL_Statis mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
+    ret = IMP_ISP_Tuning_GetWB_GOL_Statis_Sec(&wb);
+    LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetWB_GOL_Statis_Sec mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
+#endif
+
+    ret = IMP_ISP_Tuning_GetWB(&wb);
+    LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetWB mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
     ret = IMP_ISP_Tuning_GetWB_Sec(&wb);
     LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetWB_Sec mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
-    ret += IMP_ISP_Tuning_GetWB(&wb);
-    LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_GetWB mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
 
     wb.mode = (isp_core_wb_mode)mode;
     wb.rgain = rgain;
@@ -966,7 +1185,7 @@ int set_wb(int mode, unsigned short rgain, unsigned short bgain)
 
 #if defined(PLATFORM_T23)
     if (cfg->sensor.select & 0x2) {
-        ret += IMP_ISP_Tuning_SetWB_Sec(&wb);
+        ret = IMP_ISP_Tuning_SetWB_Sec(&wb);
         LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_SetWB_Sec mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
     }
     if (cfg->sensor.select & 0x1) {
@@ -974,8 +1193,8 @@ int set_wb(int mode, unsigned short rgain, unsigned short bgain)
         LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_SetWB mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
     }
 #else 
-    ret += IMP_ISP_Tuning_SetWB_Sec(&wb);
-    ret += IMP_ISP_Tuning_SetWB(&wb);
+    ret = IMP_ISP_Tuning_SetWB_Sec(&wb);
+    ret = IMP_ISP_Tuning_SetWB(&wb);
     LOG_DEBUG_OR_ERROR(ret,"IMP_ISP_Tuning_SetWB_Sec mode = " << wb.mode << " rgain = " << wb.rgain << " bgain = " << wb.bgain << " ret = " << ret);
 #endif
     return ret;

@@ -49,7 +49,7 @@ int IMPFramesource::init()
     chnAttr.crop.width = sensor->width;
     chnAttr.crop.height = sensor->height;
 
-    // chnAttr.scaler.enable = 0;
+//    chnAttr.scaler.enable = 1;
     chnAttr.scaler.enable = scale;
     if (stream->rotation != 0) {
         chnAttr.scaler.outwidth = stream->height;
@@ -107,6 +107,23 @@ int IMPFramesource::init()
 
     ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
     LOG_DEBUG_OR_ERROR(ret, "IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr)");
+
+// test scaler
+#if 0 
+    usleep(500000);
+
+    chnAttr.crop.enable = 1;
+    chnAttr.crop.top = 100;
+    chnAttr.crop.left = 100;
+    chnAttr.crop.width = 960;
+    chnAttr.crop.height = 480;
+    chnAttr.scaler.enable = 1;
+    chnAttr.scaler.outwidth = stream->height;
+    chnAttr.scaler.outheight = stream->width;
+
+    ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
+    LOG_DEBUG_OR_ERROR(ret, "IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr)");
+#endif
 
 #if !defined(NO_FIFO)
     IMPFSChnFifoAttr fifo;

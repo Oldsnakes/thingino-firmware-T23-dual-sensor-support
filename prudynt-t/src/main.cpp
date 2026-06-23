@@ -20,6 +20,7 @@
 #include "IPCServer.hpp"
 #include "imp_hal.hpp"
 #include "Motor.hpp"
+#include "Daynight.hpp"
 
 #include "ctrls_hal.hpp"
 
@@ -38,10 +39,12 @@ bool global_restart_video = false;
 bool global_restart_audio = false;
 
 bool global_restart_motion = false;
+bool global_restart_daynight = false;
 
 bool global_osd_thread_signal = false;
 bool global_main_thread_signal = false;
 bool global_motion_thread_signal = false;
+bool global_daynight_thread_signal = false;
 std::atomic<char> global_rtsp_thread_signal{1};
 
 std::shared_ptr<jpeg_stream> global_jpeg[NUM_JPEG_CHANNELS] = {nullptr};
@@ -58,6 +61,7 @@ std::atomic<int> global_Sensor = 0x3;
 
 RTSP rtsp;
 Motion motion;
+Daynight daynight;
 IMPSystem *imp_system = nullptr;
 
 bool timesync_wait()
@@ -142,6 +146,7 @@ int main(int argc, const char *argv[])
     pthread_t rtsp_thread;
     pthread_t motion_thread;
     pthread_t backchannel_thread;
+    pthread_t daynight_thread;
 
     if (Logger::init(cfg->general.loglevel))
     {
@@ -197,7 +202,7 @@ int main(int argc, const char *argv[])
 
         if (cfg->audio.input_enabled && (global_restart_audio || startup))
         {
-            StartHelper sh{0};
+            StartHelper sh{0, 0, 0, 0};
             int ret = pthread_create(&global_audio[0]->thread, nullptr, AudioWorker::thread_entry, static_cast<void *>(&sh));
             LOG_DEBUG_OR_ERROR(ret, "create audio thread");
             // wait for initialization done
@@ -238,19 +243,19 @@ int main(int argc, const char *argv[])
             }
             if (cfg->stream2.enabled) 
             {
-                StartHelper sh{encChn:2, encGrp:0};
+                StartHelper sh{encChn:2, encGrp:0, fsChnNum:0};
                 LOG_DEBUG("stream 2 (jpeg) enabled");
                 int ret = pthread_create(&global_jpeg[0]->thread, nullptr, JPEGWorker::thread_entry, static_cast<void *>(&sh));
                 LOG_DEBUG_OR_ERROR(ret, "create jpeg thread 0");
                 // wait for initialization done
                 sh.has_started.acquire();
-           } else {
+            } else {
                 LOG_DEBUG("stream 2 (jpeg) disabled");
             }
 
             if (cfg->stream3.enabled)  
             {
-                StartHelper sh2{encChn:3, encGrp:1};
+                StartHelper sh2{encChn:3, encGrp:1, fsChnNum:3};
                 LOG_DEBUG("stream 3 (jpeg) enabled");
                 int ret2 = pthread_create(&global_jpeg[1]->thread, nullptr, JPEGWorker::thread_entry, static_cast<void *>(&sh2));
                 LOG_DEBUG_OR_ERROR(ret2, "create mjpeg/jpeg thread 1");
@@ -259,14 +264,17 @@ int main(int argc, const char *argv[])
                 LOG_DEBUG("stream 3 (mjpeg/jpeg) disabled");
             }
 
-            if (cfg->stream0.osd.enabled || cfg->stream1.osd.enabled || cfg->stream4.osd.enabled || cfg->stream5.osd.enabled)
+            if ((cfg->stream0.osd.enabled && cfg->stream0.enabled) 
+                || (cfg->stream1.osd.enabled && cfg->stream1.enabled)
+                || (cfg->stream4.osd.enabled && cfg->stream4.enabled)
+                || (cfg->stream5.osd.enabled && cfg->stream5.enabled))
             {
                 LOG_DEBUG("OSD enabled");
                 int ret = pthread_create(&osd_thread, nullptr, OSD::thread_entry, NULL);
                 LOG_DEBUG_OR_ERROR(ret, "create osd thread");
                 global_osd_thread_signal = true;
             }
-        }  // start video
+        }  // # start video
 
         // start motion detection server
         if (global_restart_video || global_restart_motion || startup)
@@ -281,13 +289,31 @@ int main(int argc, const char *argv[])
         }
 
         // start rtsp server
-        if (global_rtsp_thread_signal != 0 && (global_restart_rtsp || startup))
+
+        if (global_rtsp_thread_signal != 0 && (global_restart_rtsp || global_restart_video || startup))
         {
+            if (cfg->rtsp.enable)
+            {
                 LOG_DEBUG("RTSP enabled");
-            int ret = pthread_create(&rtsp_thread, nullptr, RTSP::run, &rtsp);
-            LOG_DEBUG_OR_ERROR(ret, "create rtsp thread");
-            global_rtsp_thread_signal = 0;
+                int ret = pthread_create(&rtsp_thread, nullptr, RTSP::run, &rtsp);
+                LOG_DEBUG_OR_ERROR(ret, "create rtsp thread");
+                global_rtsp_thread_signal = 0;
+            }
+
         }
+
+        // start daynight server
+        if (global_restart_video || global_restart_daynight || startup)
+        {
+//            if (cfg->daynight.enable)
+//            {
+                LOG_DEBUG("Daynight enabled");
+                int ret = pthread_create(&daynight_thread, nullptr, Daynight::run, &daynight);
+                LOG_DEBUG_OR_ERROR(ret, "create daynight thread");
+                global_daynight_thread_signal = true;
+//            }
+        }
+
 
         /* we should wait a short period to ensure all services are up
          * and running, additionally we add the timespan which is configured as
@@ -298,13 +324,18 @@ int main(int argc, const char *argv[])
         LOG_DEBUG("main thread is go into sleep-loop....zzz");
 //        std::unique_lock lck(mutex_main);
 
+        // done starts, reset flags
         startup = false;
         global_restart = false;
         global_restart_video = false;
         global_restart_audio = false;
         global_restart_rtsp = false;
         global_restart_motion = false;
-        while (!global_restart_rtsp && !global_restart_video && !global_restart_audio && !global_restart_motion) 
+        global_restart_daynight = false;
+
+        while (!global_restart_rtsp && !global_restart_video 
+            && !global_restart_audio && !global_restart_motion 
+            && !global_restart_daynight) 
         {
             sleep(1);
 //            global_cv_worker_restart.wait(lck);
@@ -312,7 +343,7 @@ int main(int argc, const char *argv[])
 //        lck.unlock();
 
         global_restart = true;
-        if (global_restart_rtsp)
+        if (global_restart_rtsp || global_restart_video)
         {
             LOG_DEBUG("RTSP is asking to restart!!!");
             // stop rtsp thread
@@ -324,7 +355,7 @@ int main(int argc, const char *argv[])
             }
         }
 
-        if (global_restart_motion)
+        if (global_restart_motion || global_restart_video)
         {
             LOG_DEBUG("Motion is asking to restart!!!");
             // stop motion thread
@@ -333,6 +364,18 @@ int main(int argc, const char *argv[])
                 global_motion_thread_signal = false;
                 int ret = pthread_join(motion_thread, NULL);
                 LOG_DEBUG_OR_ERROR(ret, "join motion thread");
+            }
+        }
+
+        if (global_restart_daynight)
+        {
+            LOG_DEBUG("Daynight is asking to restart!!!");
+            // stop motion thread
+            if (global_daynight_thread_signal)
+            {
+                global_daynight_thread_signal = false;
+                int ret = pthread_join(daynight_thread, NULL);
+                LOG_DEBUG_OR_ERROR(ret, "join daynight thread");
             }
         }
 
@@ -358,6 +401,7 @@ int main(int argc, const char *argv[])
         if (global_restart_video)
         {
             LOG_DEBUG("Video is asking to restart!!!");
+#if 0
             // stop motion thread
             if (global_motion_thread_signal)
             {
@@ -365,7 +409,7 @@ int main(int argc, const char *argv[])
                 int ret = pthread_join(motion_thread, NULL);
                 LOG_DEBUG_OR_ERROR(ret, "join motion thread");
             }
-
+#endif
             // stop osd thread
             if (global_osd_thread_signal)
             {

@@ -35,6 +35,11 @@ bool validateInt2(const int &v)
     return v >= 0 && v <= 2;
 }
 
+bool validateInt3(const int &v)
+{
+    return v >= 0 && v <= 3;
+}
+
 bool validateInt32(const int &v)
 {
     return v >= 0 && v <= 32;
@@ -169,12 +174,24 @@ std::vector<ConfigItem<bool>> CFG::getBoolItems()
         {"audio.input_agc_enabled", audio.input_agc_enabled, false, validateBool},
 #endif
 #endif
+        {"daynight.enable", daynight.enable, true, validateBool},
+        {"daynight.night_mode", daynight.night_mode, false, validateBool},
+        {"daynight.ir850_enable", daynight.ir850_enable, false, validateBool},
+        {"daynight.ir940_enable", daynight.ir940_enable, false, validateBool},
+        {"daynight.white_enable", daynight.white_enable, false, validateBool},
+        {"daynight.ircut_enable", daynight.ircut_enable, false, validateBool},
+        {"daynight.color_enable", daynight.color_enable, false, validateBool},
+        {"daynight.log", daynight.log, true, validateBool},
+
         {"image0.isp_bypass", image0.isp_bypass, true, validateBool},
         {"image0.vflip", image0.vflip, false, validateBool},
         {"image0.hflip", image0.hflip, false, validateBool},
         {"image0.alt_sensor", image0.alt_sensor, false, validateBool},  // sensor switching (on/off)
         {"image0.core_expr_mode", image0.core_expr_mode, true, validateBool},  // exposure mode (auto/manual)       
         {"image0.again_mode", image0.again_mode, false, validateBool}, // AGain manual enable
+
+        {"image0.zoom_enable", image0.zoom_enable, false, validateBool}, // AGain manual enable
+        
         {"image1.isp_bypass", image1.isp_bypass, true, validateBool},
         {"image1.vflip", image1.vflip, false, validateBool},
         {"image1.hflip", image1.hflip, false, validateBool},
@@ -182,16 +199,20 @@ std::vector<ConfigItem<bool>> CFG::getBoolItems()
         {"image1.core_expr_mode", image1.core_expr_mode, true, validateBool},         
         {"image1.again_mode", image1.again_mode, false, validateBool}, 
 
+        {"image1.zoom_enable", image1.zoom_enable, false, validateBool}, // AGain manual enable
+
         {"motion.enabled", motion.enabled, false, validateBool},
         {"motion.whiteLight", motion.whiteLight, false, validateBool},
         {"motion.mapMode", motion.mapMode, true, validateBool},
-        {"motion.tracking_enable", motion.tracking_enable, true, validateBool},
-        {"motion.autoHome", motion.autoHome, true, validateBool},
+        {"motion.tracking_enable", motion.tracking_enable, false, validateBool},
+        {"motion.autoHome", motion.autoHome, false, validateBool},
+        {"motion.move", motion.move, false, validateBool},
         {"motor.invert_x", motor.invert_x, false, validateBool},
         {"motor.invert_y", motor.invert_y, false, validateBool},
         {"motor.hv_swap", motor.hv_swap, false, validateBool},
         {"motor.speed_supplied", motor.speed_supplied, false, validateBool},
 
+        {"rtsp.enable", rtsp.enable, true, validateBool},
         {"rtsp.auth_required", rtsp.auth_required, true, validateBool},
 #if defined(AUDIO_SUPPORT)
         {"stream0.audio_enabled", stream0.audio_enabled, true, validateBool},
@@ -204,6 +225,7 @@ std::vector<ConfigItem<bool>> CFG::getBoolItems()
         {"stream0.osd.time_enabled", stream0.osd.time_enabled, true, validateBool},
         {"stream0.osd.uptime_enabled", stream0.osd.uptime_enabled, true, validateBool},
         {"stream0.osd.usertext_enabled", stream0.osd.usertext_enabled, true, validateBool},
+
 #if defined(AUDIO_SUPPORT)
         {"stream1.audio_enabled", stream1.audio_enabled, true, validateBool},
 #endif
@@ -215,6 +237,7 @@ std::vector<ConfigItem<bool>> CFG::getBoolItems()
         {"stream1.osd.time_enabled", stream1.osd.time_enabled, true, validateBool},
         {"stream1.osd.uptime_enabled", stream1.osd.uptime_enabled, true, validateBool},
         {"stream1.osd.usertext_enabled", stream1.osd.usertext_enabled, true, validateBool},
+
 #if defined(AUDIO_SUPPORT)
         {"stream4.audio_enabled", stream4.audio_enabled, true, validateBool},
 #endif
@@ -364,6 +387,12 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"audio.input_noise_suppression", audio.input_noise_suppression, 0, [](const int &v) { return v >= 0 && v <= 3; }},
 #endif
 #endif
+        {"daynight.sensor_select", daynight.sensor_select, 3, validateInt255}, 
+        {"daynight.low_threshold", daynight.low_threshold, 100, validateInt255},
+        {"daynight.up_threshold", daynight.up_threshold, 15, validateInt255},
+        {"daynight.sample_time", daynight.sample_time, 3, validateInt255},
+        {"daynight.hold_count", daynight.hold_count, 5, validateInt255},
+
         {"general.imp_polling_timeout", general.imp_polling_timeout, 500, [](const int &v) { return v >= 1 && v <= 5000; }},
         {"general.osd_pool_size", general.osd_pool_size, 1024, [](const int &v) { return v >= 0 && v <= 65535; }},
         {"image0.ae_compensation", image0.ae_compensation, 128, validateInt255},
@@ -389,6 +418,16 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"image0.alt_speed", image0.alt_speed, 0, [](const int &v) { return v >= 10 && v <= 30000; }}, // rate for sensor sw: 10 ms - 30000 ms
         {"image0.core_expr_time", image0.core_expr_time, 500, [](const int &v) { return v >= 0 && v <= 2234; }},  // sensor integrate time 14 bits
         {"image0.again_gain", image0.again_gain, 15000, [](const int &v) { return v >= 0 && v <= 744532; }}, // AGain manual value
+        // auto zoom
+        {"image0.scaler_enable", image0.scaler_enable, 1, validateInt2},
+        {"image0.scaler_outwidth", image0.scaler_outwidth, 1280, validateIntGe0},
+        {"image0.scaler_outheight", image0.scaler_outheight, 720, validateIntGe0},
+        {"image0.crop_enable", image0.crop_enable, 1, validateInt2},
+        {"image0.crop_left", image0.crop_left, 0, validateIntGe0},
+        {"image0.crop_top", image0.crop_top, 0, validateIntGe0},
+        {"image0.crop_width", image0.crop_width, 1280, validateIntGe0},
+        {"image0.crop_height", image0.crop_height, 720, validateIntGe0},
+
         {"image1.ae_compensation", image1.ae_compensation, 128, validateInt255},
         {"image1.anti_flicker", image1.anti_flicker, 2, validateInt2},
         {"image1.backlight_compensation", image1.backlight_compensation, 0, [](const int &v) { return v >= 0 && v <= 10; }},
@@ -412,6 +451,15 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"image1.alt_speed", image1.alt_speed, 0, [](const int &v) { return v >= 10 && v <= 30000; }}, 
         {"image1.core_expr_time", image1.core_expr_time, 500, [](const int &v) { return v >= 0 && v <= 2234; }},  // sensor integrate time 14 bits
         {"image1.again_gain", image1.again_gain, 15000, [](const int &v) { return v >= 0 && v <= 744532; }},
+        // auto zoom
+        {"image1.scaler_enable", image1.scaler_enable, 1, validateInt2},
+        {"image1.scaler_outwidth", image1.scaler_outwidth, 1280, validateIntGe0},
+        {"image1.scaler_outheight", image1.scaler_outheight, 720, validateIntGe0},
+        {"image1.crop_enable", image1.crop_enable, 1, validateInt2},
+        {"image1.crop_left", image1.crop_left, 0, validateIntGe0},
+        {"image1.crop_top", image1.crop_top, 0, validateIntGe0},
+        {"image1.crop_width", image1.crop_width, 1280, validateIntGe0},
+        {"image1.crop_height", image1.crop_height, 720, validateIntGe0},
 
         // add webui gpio support, use int to allow status feedback.  0: off, 1: on, 2: allow current state feedback
         {"gpio.sensor_switch", gpio.sensor_switch, 0, validateInt2},  
@@ -419,7 +467,6 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"gpio.ir940", gpio.ir940, 0, validateInt2},  
         {"gpio.white", gpio.white, 0, validateInt2},  
         {"gpio.ircut", gpio.ircut, 0, validateInt2},  
-        {"gpio.daynight", gpio.daynight, 0, validateInt2},  
         {"motion.debounce_time", motion.debounce_time, 0, validateIntGe0},
         {"motion.post_time", motion.post_time, 5, validateIntGe0},
         {"motion.ivs_polling_timeout", motion.ivs_polling_timeout, 1000, [](const int &v) { return v >= 100 && v <= 10000; }},
@@ -436,6 +483,7 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"motion.roi_1_x", motion.roi_1_x, IVS_AUTO_VALUE, validateIntGe0},
         {"motion.roi_1_y", motion.roi_1_y, IVS_AUTO_VALUE, validateIntGe0},
         {"motion.roi_count", motion.roi_count, 1, [](const int &v) { return v >= 1 && v <= 52; }},
+        {"motion.selected_tile", motion.selected_tile, 20, [](const int &v) { return v >= 0 && v < 52; }},  // center at 20
         {"motion.map_dim_h", motion.map_dim_h, 8, validateIntGe0},  // h * v should <= 52
         {"motion.map_dim_v", motion.map_dim_v, 6, validateIntGe0},  
         {"motion.home_time", motion.home_time, 3, validateIntGe0},
@@ -451,7 +499,7 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"motor.move_mode", motor.move_mode, 0, validateIntGe0},  // abs, rel
         {"motor.state", motor.state, 0, validateIntGe0},  // 1: busy, 2: active, 0: disable
         // tracking
-        {"motor.box_dx", motor.box_dx, 50, validateIntGe0},  // motor max limit
+        {"motor.box_dx", motor.box_dx, 50, validateIntGe0},  
         {"motor.box_dy", motor.box_dy, 50, validateIntGe0},  
 
         {"rtsp.est_bitrate", rtsp.est_bitrate, 5000, validateIntGe0},
@@ -459,7 +507,7 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"rtsp.port", rtsp.port, 554, validateInt65535},
         {"rtsp.send_buffer_size", rtsp.send_buffer_size, 307200, validateIntGe0},
         {"rtsp.session_reclaim", rtsp.session_reclaim, 65, validateIntGe0},
-        {"sensor.select", sensor.select, 3, validateInt32},
+        {"sensor.select", sensor.select, 3, validateInt3},
         {"sensor.id", sensor.id, 0, validateInt2},
         {"sensor.i2c_bus", sensor.i2c_bus, 0, validateIntGe0, false, "/proc/jz/sensor/i2c_bus"},
         {"sensor.fps", sensor.fps, 25, validateInt120, false, "/proc/jz/sensor/max_fps"},
@@ -470,7 +518,7 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"sensor.mclk", sensor.mclk, 1, validateIntGe0, false, "/proc/jz/sensor/mclk"},
         {"sensor.video_interface", sensor.video_interface, 0, validateIntGe0, false, "/proc/jz/sensor/video_interface"},
         {"sensor.gpio_reset", sensor.gpio_reset, -1, [](const int &v) { return v >= -1; }, false, "/proc/jz/sensor/reset_gpio"},
-        {"sensor1.select", sensor.select, 1, validateInt2},
+        {"sensor1.select", sensor.select, 1, validateInt3},
         {"sensor1.id", sensor1.id, 1,validateInt2},
         {"sensor1.i2c_bus", sensor1.i2c_bus, 1, validateIntGe0, false, "/proc/jz/sensor1/i2c_bus"},
         {"sensor1.fps", sensor1.fps, 25, validateInt120, false, "/proc/jz/sensor1/max_fps"},
@@ -1001,7 +1049,7 @@ bool CFG::updateConfig()
 
     // Save config using JCT - it automatically sorts keys and formats nicely
     LOG_DEBUG("CFG::updateConfig() - About to save config to " << filePath);
-    LOG_DEBUG("CFG::updateConfig() - jsonConfig pointer: " << (uintptr_t)jsonConfig);
+    // LOG_DEBUG("CFG::updateConfig() - jsonConfig pointer: " << (uintptr_t)jsonConfig);
 
     if (!jsonConfig) {
         LOG_ERROR("CFG::updateConfig() - jsonConfig is null!");
@@ -1009,7 +1057,7 @@ bool CFG::updateConfig()
     }
 
     int save_result = save_config(filePath.c_str(), jsonConfig);
-    LOG_DEBUG("CFG::updateConfig() - save_config returned: " << save_result);
+    LOG_DEBUG("CFG::updateConfig() - save_config returned: " << (save_result? "good":"failed"));
 
     if (save_result != 0) {
         LOG_DEBUG("Config is written to " << filePath);

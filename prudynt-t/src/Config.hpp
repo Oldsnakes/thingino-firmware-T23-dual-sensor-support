@@ -106,6 +106,7 @@ struct _general {
     bool audio_debug_verbose;
 };
 struct _rtsp {
+    bool enable;
     int port;
     int est_bitrate;
     int out_buffer_size;
@@ -124,9 +125,9 @@ struct _sensor {
     int height;
     const char *model;
     unsigned int i2c_address;
+    int i2c_bus;
     int boot;
     int mclk;
-    int i2c_bus;
     int video_interface;
     int gpio_reset;
     const char *chip_id;
@@ -166,6 +167,17 @@ struct _image {
     int again_gain;
     bool core_expr_mode;
     int core_expr_time;
+    // ### TW:  auto zoom
+    bool zoom_enable;
+	int scaler_enable;
+	int scaler_outwidth;
+	int scaler_outheight;
+	int crop_enable;
+	int crop_left;
+	int crop_top;
+	int crop_width;
+	int crop_height;
+    double zoom_factor;
 };
 
 // TW:  GPIO support
@@ -175,7 +187,23 @@ struct _gpio {
         int    white;
         int    ircut;
         int    sensor_switch;
-        int    daynight;
+};
+
+// TW:  Daynight support
+struct _daynight {
+        bool    enable;
+        bool    ir850_enable;
+        bool    ir940_enable;
+        bool    white_enable;
+        bool    ircut_enable;
+        bool    color_enable;
+        int     sensor_select;
+        int     low_threshold;
+        int     up_threshold;
+        int     sample_time;
+        int     hold_count;
+        bool    night_mode;
+        bool    log;
 };
 
 // TW:  Motor control
@@ -327,6 +355,8 @@ struct _motion {
     const char *rois_hit_list;
     bool tracking_enable;
     bool autoHome;
+    int selected_tile;
+    bool move;      // command to move
 
     const char *script_path;
     std::array<roi, 52> rois;
@@ -377,6 +407,7 @@ class CFG {
         _image image0{};
         _image image1{};
         _gpio gpio{};
+        _daynight daynight{};
         _motor motor{};
 		_stream stream0{};
         _stream stream1{};

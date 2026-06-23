@@ -153,28 +153,46 @@ namespace {
         if (wrote){ add_key(out, sep, root, ""); out += sect; out += "}"; }
     }
 
+    // with two image sensors 0/1
     void handle_image(JsonValue *obj, int idx, std::string &out, bool &sep){
+//        LOG_DEBUG("** OUT = (" << out << ")");
         const char* root = idx==0?"image0":"image1";
         _image img = idx==0?cfg->image0:cfg->image1;
         int value = 100;
-        add_key(out, sep, root, "{"); bool s2=false; bool wrote=false;
+        add_key(out, sep, root, "{"); 
+        bool s2=false; 
+        bool wrote=false;
         auto add_int = [&](const char* key, const std::string &path, auto setter){
             if (JsonValue* v = obj_get(obj, key)){
                 if (v->type == JSON_NUMBER){ 
                     cfg->set<int>(path, (int) v->value.number); 
                     value = (int) v->value.number;
-        LOG_DEBUG("-*-JsonAPI add_int: idx = " << idx << " brightness = " << img.brightness << " v->value.number" << (int)v->value.number);
+        // LOG_DEBUG("-*-JsonAPI add_int: idx = " << idx << " brightness = " << img.brightness << " v->value.number" << (int)v->value.number);
 //                    if (setter) setter(); 
                     setter(); 
                 }
-                add_key(out,s2,key); add_num(out, cfg->get<int>(path)); 
+                add_key(out,s2,key); 
+                add_num(out, cfg->get<int>(path)); 
                 wrote=true;
+            }
+        };
+        auto add_int_v=[&](const char* key,const std::string &path)
+        { 
+            if(JsonValue* v=obj_get(obj,key))
+            { 
+                if(v->type==JSON_NUMBER) cfg->set<int>(path,(int) v->value.number); 
+                add_key(out,s2,key); 
+                add_num(out,cfg->get<int>(path)); 
+//    LOG_DEBUG("-- " << key << " = " << v->value.number << " (" << cfg->get<int>(path) << ")");
+//    LOG_DEBUG("-- OUT = (" << out << ")");
+                wrote=true; 
             }
         };
         auto add_boolk = [&](const char* key, const std::string &path, auto setter_true, auto setter_false){
             if (JsonValue* v = obj_get(obj, key)){
                 if (v->type == JSON_BOOL){ cfg->set<bool>(path, v->value.boolean!=0); 
-                    if (v->value.boolean) { 
+    LOG_DEBUG("=I " << key <<" OUT = (" << out << ")");
+                if (v->value.boolean) { 
 //                        if (setter_true) setter_true(); 
                         setter_true(); 
                     } else {
@@ -182,12 +200,15 @@ namespace {
                         setter_false(); 
                     } 
                 }
-                add_key(out,s2,key); add_bool(out, cfg->get<bool>(path)); 
+//    LOG_DEBUG("== " << key << "== OUT = (" << out << ")");
+                add_key(out,s2,key); 
+                add_bool(out, cfg->get<bool>(path)); 
+//    LOG_DEBUG("=O " << key << " OUT = (" << out << ")");
                 wrote=true;
             }
         };
 
-       // Scalars and side-effects
+       // Scalars  and side-effects
         add_int("brightness", std::string(root)+".brightness", [&value]{ hal::isp::set_brightness(value); });
 
         add_int("contrast",   std::string(root)+".contrast",   [&value]{ hal::isp::set_contrast(value); });
@@ -249,15 +270,28 @@ namespace {
             []{ hal::isp::set_core_expr_mode(false); });
     
         add_int("core_expr_time", std::string(root)+".core_expr_time", [&value]{ hal::isp::set_core_expr_time(value); });
+          
+        add_int_v("crop_left",std::string(root)+".crop_left"); 
+        add_int_v("crop_top",std::string(root)+".crop_top");
+        add_int_v("crop_width",std::string(root)+".crop_width"); 
+        add_int_v("crop_height",std::string(root)+".crop_height");
+        add_int_v("scaler_outwidth",std::string(root)+".scaler_outwidth");
+        add_int_v("scaler_outheight",std::string(root)+".scaler_outheight");
 
-        // WB bundle
+        add_boolk("zoom_enable", std::string(root)+".zoom_enable",
+            []{ hal::isp::set_zoom_enable(true); },
+            []{ hal::isp::set_zoom_enable(false); });
+//            []{ hal::isp::set_FramesourceAttr(true); },
+//            []{ hal::isp::set_FramesourceAttr(false); });
+ 
+            // WB bundle
         if (JsonValue* v = obj_get(obj, "core_wb_mode")){
-            LOG_DEBUG("wbmode: " << (int)v->value.number << " type: " << v->type);
+//            LOG_DEBUG("wbmode: " << (int)v->value.number << " type: " << v->type);
             if (v->type == JSON_NUMBER){ 
                 LOG_DEBUG("wbmode: " << (int)v->value.number);
                 cfg->set<int>(std::string(root)+".core_wb_mode", (int)v->value.number); 
-                LOG_DEBUG("wbmode: cfg - " << img.core_wb_mode);
-                LOG_DEBUG("wbmode: cfg->get - " << cfg->get<int>(std::string(root)+".core_wb_mode"));
+//                LOG_DEBUG("wbmode: cfg - " << img.core_wb_mode);
+//                LOG_DEBUG("wbmode: cfg->get - " << cfg->get<int>(std::string(root)+".core_wb_mode"));
             }
         }
         if (JsonValue* v = obj_get(obj, "wb_rgain")){
@@ -276,8 +310,12 @@ namespace {
             wrote=true;
         }
 
-        if (!wrote){ out.erase(out.size()-1); sep = (out.back()==','); return; }
+        if (!wrote){ 
+            out.erase(out.size()-1); sep = (out.back()==','); 
+            return; 
+        }
         out += "}";
+    LOG_DEBUG("## <Image> OUT = (" << out << ")");
     }  // handle_image
 
     void handle_gpio(JsonValue *obj, std::string &out, bool &sep)
@@ -326,9 +364,52 @@ namespace {
         if (add_int_g(strkey, state)) {
                 hal::isp::set_ircut(state);
         }
-        strkey = "daynight";
-        if (add_int_g(strkey, state)) {
-                hal::isp::set_daynight(state);
+
+        if (!wrote){ 
+            out.erase(out.size()-1); sep = (out.back()==','); return; 
+        }
+        out += "}";
+    }
+
+    void handle_daynight(JsonValue *obj, std::string &out, bool &sep)
+    {
+        const char* root = "daynight.";
+        add_key(out, sep, "daynight", "{"); 
+        bool s2=false; 
+        bool wrote=false;
+        std::string cpp_key;
+        auto add_boolk_d=[&](std::string& key,std::string &path)
+        { 
+            if(JsonValue* v=obj_get(obj,key.c_str()))
+            { 
+                if(v->type==JSON_BOOL) cfg->set<bool>(path, v->value.boolean!=0); 
+                add_key(out,s2,key.c_str()); 
+                add_bool(out,cfg->get<bool>(path)); 
+                wrote=true; 
+            }
+        };
+        auto add_int_d = [&](std::string& key, std::string &path)
+        {
+            if (JsonValue* v = obj_get(obj, key.c_str())){
+                if (v->type == JSON_NUMBER){ cfg->set<int>(path, (int)v->value.number); }
+                add_key(out,s2,key.c_str()); 
+                add_num(out, cfg->get<int>(path)); 
+                wrote=true;
+            }
+        };
+
+        const std::string int_cmd[] =  {"low_threshold","up_threshold","sample_time","hold_count"};
+        bool state;
+        std::string strCmd;
+        for (std::string strkey : int_cmd) {
+            strCmd = std::string(root) + strkey;
+            add_int_d(strkey,strCmd);
+        }
+        const std::string bool_cmd[] = {"enable","night_mode","color_enable","sensor_switch",
+                                        "ir850_enable","white_enable","ir940_enable","ircut_enable","log"};
+        for (std::string strkey : bool_cmd) {
+            strCmd = std::string(root) + strkey;
+            add_boolk_d(strkey,strCmd);
         }
 
         if (!wrote){ 
@@ -340,7 +421,15 @@ namespace {
     void handle_osd(JsonValue *obj, int idx, std::string &sect, bool &s2, bool &wrote){
         const char* root = idx==0?"stream0.osd":(idx==4?"stream4.osd":"stream1.osd");
         auto add_int=[&](const char* key,const std::string &path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_NUMBER) cfg->set<int>(path,(int)v->value.number); add_key(sect,s2,key); add_num(sect,cfg->get<int>(path)); wrote=true; }};
-        auto add_boolk2=[&](const char* key,const std::string &path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_BOOL) cfg->set<bool>(path, v->value.boolean!=0); add_key(sect,s2,key); add_bool(sect,cfg->get<bool>(path)); wrote=true; }};
+        auto add_boolk2=[&](const char* key,const std::string &path){ 
+            if(JsonValue* v=obj_get(obj,key)){ 
+                if(v->type==JSON_BOOL) 
+                    cfg->set<bool>(path, v->value.boolean!=0); 
+                    add_key(sect,s2,key); 
+                    add_bool(sect,cfg->get<bool>(path)); 
+                    wrote=true; 
+                }
+            };
         auto add_strs=[&](const char* key,const std::string &path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_STRING && v->value.string) cfg->set<const char*>(path, strdup(v->value.string)); add_key(sect,s2,key); add_str(sect,cfg->get<const char*>(path)); wrote=true; }};
         auto add_hex=[&](const char* key,const std::string &path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_STRING && v->value.string) cfg->set<unsigned int>(path, hexColorToUint(v->value.string)); add_key(sect,s2,key); add_hexstr(sect, cfg->get<unsigned int>(path)); wrote=true; }};
 
@@ -447,7 +536,7 @@ namespace {
         add_int("input_agc_compression_gain_db","audio.input_agc_compression_gain_db", true);
         add_boolk_a("force_stereo","audio.force_stereo", false, true);
         // Output
-        add_boolk_a("output_enabled","audio.output_enabled", /*rest_rtsp*/true, /*rest_motion*/true, /*rest_audio*/true);
+        add_boolk_a("output_enabled","audio.output_enabled", /*rest_rtsp*/true, /*rest_motion*/false, /*rest_audio*/true);
         add_int("output_sample_rate","audio.output_sample_rate", true);
     #endif
         add_int("buffer_warn_frames","audio.buffer_warn_frames", false);
@@ -531,8 +620,19 @@ namespace {
     }
 
     void handle_motion(JsonValue *obj, std::string &out, bool &sep){
+        int value;
         add_key(out, sep, "motion", "{"); bool s2=false; bool wrote=false;
-        auto add_int=[&](const char* key,const char* path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_NUMBER) cfg->set<int>(path,(int)v->value.number); add_key(out,s2,key); add_num(out,cfg->get<int>(path)); wrote=true; }};
+        auto add_int=[&](const char* key,const char* path)
+        { 
+            if(JsonValue* v=obj_get(obj,key))
+            { 
+                if(v->type==JSON_NUMBER) 
+                    cfg->set<int>(path,(int)v->value.number); 
+                add_key(out,s2,key); 
+                add_num(out,cfg->get<int>(path)); 
+                wrote=true; 
+            }
+        };
         auto add_boolk_m=[&](const char* key,const char* path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_BOOL) cfg->set<bool>(path, v->value.boolean!=0); add_key(out,s2,key); add_bool(out,cfg->get<bool>(path)); wrote=true; }};
         auto add_strs=[&](const char* key,const char* path)
         { 
@@ -540,11 +640,24 @@ namespace {
             { 
                 if(v->type==JSON_STRING && v->value.string) 
                     cfg->set<const char*>(path, strdup(v->value.string)); 
-                add_key(out,s2,key); add_str(out,cfg->get<const char*>(path)); wrote=true; 
+                add_key(out,s2,key); 
+                add_str(out,cfg->get<const char*>(path)); 
+                wrote=true; 
             }
         };
-
-        add_int("monitor_stream","motion.monitor_stream");
+        auto add_int_s = [&](const char* key, const char* path, auto setter){
+            if (JsonValue* v = obj_get(obj, key)){
+                if (v->type == JSON_NUMBER){ 
+                    cfg->set<int>(path, (int) v->value.number); 
+                    value = (int) v->value.number;
+                    setter(); 
+                }
+                add_key(out,s2,key); 
+//                add_num(out, cfg->get<int>(path)); 
+                add_num(out, value); 
+                wrote=true;
+            }
+        };
         add_int("debounce_time","motion.debounce_time");
         add_int("post_time","motion.post_time");
         add_int("cooldown_time","motion.cooldown_time");
@@ -553,8 +666,7 @@ namespace {
         add_int("ivs_polling_timeout","motion.ivs_polling_timeout");
         add_int("sensitivity","motion.sensitivity");
         add_int("skip_frame_count","motion.skip_frame_count");
-        add_int("frame_width","motion.frame_width");
-        add_int("frame_height","motion.frame_height");
+        add_int("frame_width","motion.frame_width"); add_int("frame_height","motion.frame_height");
         add_int("roi_0_x","motion.roi_0_x"); add_int("roi_0_y","motion.roi_0_y");
         add_int("roi_1_x","motion.roi_1_x"); add_int("roi_1_y","motion.roi_1_y");
         add_int("roi_count","motion.roi_count");
@@ -562,6 +674,7 @@ namespace {
         add_strs("script_path","motion.script_path");
         // ### TW
         add_boolk_m("tracking_enable","motion.tracking_enable");
+        add_int("monitor_stream","motion.monitor_stream");
         add_boolk_m("whiteLight","motion.whiteLight");
         add_boolk_m("mapMode","motion.mapMode");
         add_boolk_m("autoHome","motion.autoHome");
@@ -569,6 +682,8 @@ namespace {
         add_int("move_time","motion.move_time");
         add_int("map_dim_h","motion.map_dim_h");
         add_int("map_dim_v","motion.map_dim_v");
+        add_int_s("selected_tile","motion.selected_tile", [&value]{ hal::isp::center_tile(value); });
+//        add_boolk_m("move","motion.move");
 
         if (JsonValue* rois = obj_get(obj, "rois")){
             if (rois->type == JSON_NULL)  // send rois from cfg back to WebUI
@@ -618,8 +733,13 @@ namespace {
             }
         }
 
-        if(!wrote){ out.erase(out.size()-1); return; } out += "}";
+        if(!wrote){ 
+            out.erase(out.size()-1); 
+            return; 
+        } 
+        out += "}";
     }
+
     void handle_info(JsonValue *obj, std::string &out, bool &sep){
         add_key(out, sep, "info", "{"); bool s2=false; bool wrote=false;
         // Currently only imp_system_version (read)
@@ -632,13 +752,13 @@ namespace {
     void handle_action(JsonValue *obj, std::string &out, bool &sep){
         add_key(out, sep, "action", "{"); bool s2=false; bool wrote=false;
         if (JsonValue* rst = obj_get(obj, "restart_thread"); rst && rst->type==JSON_NUMBER){
-            int mask = (int)rst->value.number;  // bit 0:  rtsp, 1: video, 2: audio, 3: motion
+            int mask = (int)rst->value.number;  // bit 0: rtsp, 1: video, 2: audio, 3: motion
             LOG_DEBUG("mask = " << mask);
             if (mask & 1) global_restart_rtsp = true;
             if (mask & 2) global_restart_video = true;
             if (mask & 4) global_restart_audio = true;
             if (mask & 8) global_restart_motion = true;
-            LOG_DEBUG("global:  rtsp" << global_restart_rtsp << " video " << global_restart_video << " audio " << global_restart_audio << " motion " << global_restart_motion);
+            LOG_DEBUG("global:  rtsp " << global_restart_rtsp << " video " << global_restart_video << " audio " << global_restart_audio << " motion " << global_restart_motion);
             add_key(out,s2,"restart_thread"); add_str(out, "ok"); wrote=true;
         }
         if (JsonValue* sv = obj_get(obj, "save_config"); sv && sv->type==JSON_NULL){
@@ -658,28 +778,41 @@ namespace {
         auto add_str_r=[&](const char* key, const char* path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_STRING && v->value.string) cfg->set<const char*>(path, strdup(v->value.string)); add_key(out,s2,key); add_str(out,cfg->get<const char*>(path)); wrote=true; }};
         auto add_bool_r=[&](const char* key, const char* path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_BOOL) cfg->set<bool>(path, v->value.boolean!=0); add_key(out,s2,key); add_bool(out,cfg->get<bool>(path)); wrote=true; }};
         add_int("port","rtsp.port"); add_int("est_bitrate","rtsp.est_bitrate"); add_int("out_buffer_size","rtsp.out_buffer_size"); add_int("send_buffer_size","rtsp.send_buffer_size");
+        add_bool_r("enable","rtsp.enable");
         add_bool_r("auth_required","rtsp.auth_required");
         add_str_r("name","rtsp.name"); add_str_r("username","rtsp.username"); add_str_r("password","rtsp.password");
         if(!wrote){ out.erase(out.size()-1); return; } out += "}";
     }
 
     void handle_sensor(JsonValue *obj, std::string &out, bool &sep){
-        add_key(out, sep, "sensor", "{"); bool s2=false; bool wrote=false;
+        add_key(out, sep, "sensor", "{"); 
+        bool s2=false; 
+        bool wrote=false;
         auto add_str_s=[&](const char* key, const char* path){ if(JsonValue* v=obj_get(obj,key)){ if(v->type==JSON_STRING && v->value.string) cfg->set<const char*>(path, strdup(v->value.string)); add_key(out,s2,key); add_str(out,cfg->get<const char*>(path)); wrote=true; }};
         auto add_int=[&](const char* key, const char* path){
             if(JsonValue* v=obj_get(obj,key)){ 
-                if(v->type==JSON_NUMBER) cfg->set<int>(path,(int)v->value.number); 
+                if(v->type==JSON_NUMBER) 
+                    cfg->set<int>(path,(int)v->value.number); 
                 add_key(out,s2,key); 
                 add_num(out,cfg->get<int>(path)); 
                 wrote=true; 
             }
         };
-        add_str_s("model","sensor.model"); add_int("fps","sensor.fps"); add_int("width","sensor.width"); add_int("height","sensor.height"); add_int("select","sensor.select"); 
+        add_str_s("model","sensor.model"); 
+        add_int("fps","sensor.fps"); 
+        add_int("width","sensor.width"); 
+        add_int("height","sensor.height"); 
+        add_int("select","sensor.select"); 
         add_int("i2c_address","sensor.i2c_address");
+        add_int("i2c_bus","sensor.i2c_bus");
         
-        add_int("select", "sensor.select");
- 
-        if(!wrote){ out.erase(out.size()-1); return; } out += "}";
+        LOG_DEBUG("--> sensor.select " << cfg->get<int>("sensor.select"));
+
+        if(!wrote){ 
+            out.erase(out.size()-1); 
+            return; 
+        } 
+        out += "}";
     }
 
     void handle_jpeg_stream(JsonValue *obj, int idx, std::string &out, bool &sep){
@@ -715,8 +848,14 @@ namespace JsonAPI {
 
 bool process_json(const std::string &in, std::string &out)
 {
+    LOG_DEBUG(">> Jason input string: (" << in.c_str() << ")");
+    
     JsonValue *root = parse_json_string(in.c_str());
-    if (!root || root->type != JSON_OBJECT){ if(root) free_json_value(root); out = "{}"; return false; }
+    if (!root || root->type != JSON_OBJECT){ 
+        if(root) free_json_value(root); 
+        out = "{}"; 
+        return false; 
+    }
 
     out = "{"; 
     bool sep=false;
@@ -724,7 +863,7 @@ bool process_json(const std::string &in, std::string &out)
     // Iterate top-level keys
     for (JsonKeyValue *kv = root->value.object_head; kv; kv = kv->next){
         const char *k = kv->key; JsonValue *v = kv->value;
-        LOG_DEBUG("&&& k: " << k );
+        LOG_DEBUG("&&& Jason Object: " << k );
 
         if (!strcmp(k, "stream0") && v && v->type == JSON_OBJECT){ 
             handle_stream(v, 0, out, sep); 
@@ -733,7 +872,8 @@ bool process_json(const std::string &in, std::string &out)
             handle_stream(v, 1, out, sep); 
         }
         else if (!strcmp(k, "image")   && v && v->type == JSON_OBJECT){ 
-            switch (cfg->sensor.select) {
+            LOG_DEBUG("image: <-- sensor.select " << cfg->get<int>("sensor.select"));
+            switch (cfg->get<int>("sensor.select")) {
                 case 1: // sensor 0 (cam 1)
                     handle_image(v, 0, out, sep); 
                     break;
@@ -742,14 +882,15 @@ bool process_json(const std::string &in, std::string &out)
                     break;
                 case 3: // both sensor
                     handle_image(v, 1, out, sep); 
+                    sleep(1);
                     handle_image(v, 0, out, sep); 
                     break;
                 default:
-                    LOG_DEBUG("Invalid image config request: " << cfg->sensor.select);
+                    LOG_DEBUG("Invalid image config request: " << cfg->get<int>("sensor.select"));
                     break;
             }
-        }
-        else if (!strcmp(k, "gpio")   && v && v->type == JSON_OBJECT){ handle_gpio(v, out, sep); }
+        } 
+        else if (!strcmp(k, "gpio")    && v && v->type == JSON_OBJECT){ handle_gpio(v, out, sep); }
         else if (!strcmp(k, "general") && v && v->type == JSON_OBJECT){ handle_general(v, out, sep); }
         else if (!strcmp(k, "rtsp")    && v && v->type == JSON_OBJECT){ handle_rtsp(v, out, sep); }
         else if (!strcmp(k, "sensor")  && v && v->type == JSON_OBJECT){ handle_sensor(v, out, sep); }
@@ -759,13 +900,14 @@ bool process_json(const std::string &in, std::string &out)
         else if (!strcmp(k, "audio")   && v && v->type == JSON_OBJECT){ handle_audio(v, out, sep); }
     #endif
         else if (!strcmp(k, "motion")  && v && v->type == JSON_OBJECT){ handle_motion(v, out, sep); }
-        else if (!strcmp(k, "motor")  && v && v->type == JSON_OBJECT){ handle_motor(v, out, sep); }
+        else if (!strcmp(k, "motor")   && v && v->type == JSON_OBJECT){ handle_motor(v, out, sep); }
+        else if (!strcmp(k, "daynight") && v && v->type == JSON_OBJECT){ handle_daynight(v, out, sep); }
         else if (!strcmp(k, "info")    && v && v->type == JSON_OBJECT){ handle_info(v, out, sep); }
         else if (!strcmp(k, "action")  && v && v->type == JSON_OBJECT){ handle_action(v, out, sep); }
     }
 
     out += "}";
-    LOG_DEBUG("Jason Out string: <" << out << ">");
+    LOG_DEBUG("<< Jason Out string: <" << out << ">");
     free_json_value(root);
     return true;
 }

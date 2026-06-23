@@ -139,6 +139,10 @@ int enable_sensor(IMPSensorInfo* sinfo);
 int disable_sensor();
 int del_sensor(IMPSensorInfo* sinfo);
 
+// auto zoom
+int set_zoom_enable(bool enable);
+int set_FramesourceAttr(bool enable, int chnNr);
+
 // image
 int set_alt_sensor(bool enable);
 int set_again_mode(bool enable);
@@ -147,12 +151,15 @@ int set_again_gain(unsigned int val);
 int set_core_expr_time(unsigned int val);
 int set_vhflip_sensor(int sensor, unsigned int val);
 void touch_AE_AGain();
+void ae_status();
 // gpio
 bool set_gpio(std::string gpio_name, bool enable);
 bool get_gpio(std::string gpio_name);
 
 int set_ircut(bool enable);
-int set_daynight(bool enable);
+
+// motion/motor
+int center_tile(int idx);
 
 } // namespace isp
 

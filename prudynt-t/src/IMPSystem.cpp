@@ -64,22 +64,22 @@ int IMPSystem::init()
 
     int sensor_id = 0;
 
-    // sensor 0:  
-    sinfo = create_sensor_info(sensor1, sensor_id);
-    LOG_INFO("Sensor: " << sinfo.name << " address: " << sinfo.i2c.addr << " adaptor: " << sinfo.i2c.i2c_adapter_id << " id: " << sinfo.sensor_id);
-    ret = hal::isp::add_sensor(&sinfo);
-    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_AddSensor-0(&sinfo)");
-
-    usleep(1000);
-    sensor_id++;
-
+    // second sensor, first:  
     if (NUM_SENSOR == 2) {
-        // sensor 1:  the I2C bus 0 is dominent channel, need to be the last sensor to add.  The prudynt.json need to have to match it with config
-        sinfo = create_sensor_info(sensor0, sensor_id);
+        sinfo = create_sensor_info(sensor1, sensor_id);
         LOG_INFO("Sensor: " << sinfo.name << " address: " << sinfo.i2c.addr << " adaptor: " << sinfo.i2c.i2c_adapter_id << " id: " << sinfo.sensor_id);
         ret = hal::isp::add_sensor(&sinfo);
-        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_AddSensor-1(&sinfo)");
+        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_AddSensor-0(&sinfo)");
+
+        usleep(1000);
+        sensor_id++;
     }
+
+    // first sensor:  the I2C bus 0 is dominent channel, need to be the last sensor to add.  The prudynt.json needs to  match it in config
+    sinfo = create_sensor_info(sensor0, sensor_id);
+    LOG_INFO("Sensor: " << sinfo.name << " address: " << sinfo.i2c.addr << " adaptor: " << sinfo.i2c.i2c_adapter_id << " id: " << sinfo.sensor_id);
+    ret = hal::isp::add_sensor(&sinfo);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_AddSensor-1(&sinfo)");
 
     ret = hal::isp::enable_sensor(&sinfo);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_EnableSensor() sensors: " << NUM_SENSOR);
@@ -96,18 +96,18 @@ int IMPSystem::init()
     ret = IMP_ISP_Tuning_GetSensorAttr(&sensorAttr);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorAttr sensor");
     LOG_DEBUG("Sensor 0 size: " << sensorAttr.width << "X" << sensorAttr.height << " fps: " << sensorAttr.fps);
-    if (cfg->sensor.select & 0x2) {
+    if (NUM_SENSOR == 2) {
         ret = IMP_ISP_Tuning_GetSensorAttr_Sec(&sensorAttr);
         LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorAttr_Sec sensor");
         LOG_DEBUG("Sensor 1 size: " << sensorAttr.width << "X" << sensorAttr.height << " fps: " << sensorAttr.fps);
     }
 
-        IMP_ISP_Tuning_SetAeFreeze(IMPISP_TUNING_OPS_MODE_DISABLE);
-        IMP_ISP_Tuning_SetISPCustomMode(IMPISP_TUNING_OPS_MODE_DISABLE);
-    if (cfg->sensor.select & 0x2) {
-        IMP_ISP_Tuning_SetAeFreeze_Sec(IMPISP_TUNING_OPS_MODE_DISABLE);
-        IMP_ISP_Tuning_SetISPCustomMode_Sec(IMPISP_TUNING_OPS_MODE_DISABLE);
-    }
+//        IMP_ISP_Tuning_SetAeFreeze(IMPISP_TUNING_OPS_MODE_DISABLE);
+//        IMP_ISP_Tuning_SetISPCustomMode(IMPISP_TUNING_OPS_MODE_DISABLE);
+//    if (NUM_SENSOR == 2) {
+//        IMP_ISP_Tuning_SetAeFreeze_Sec(IMPISP_TUNING_OPS_MODE_DISABLE);
+//        IMP_ISP_Tuning_SetISPCustomMode_Sec(IMPISP_TUNING_OPS_MODE_DISABLE);
+//    }
 
 #if !defined(NO_TUNINGS)
 
@@ -119,7 +119,7 @@ int IMPSystem::init()
 	ae_min.min_again_short = 2048;
     ret = IMP_ISP_Tuning_SetAeMin(&ae_min);
     LOG_DEBUG_OR_ERROR(ret, "IMP_ISP_Tuning_SetAeMin(" << ae_min.min_again << ")");
-    if (cfg->sensor.select & 0x2) {
+    if (NUM_SENSOR == 2) {
         ret = IMP_ISP_Tuning_SetAeMin_Sec(&ae_min);
         LOG_DEBUG_OR_ERROR(ret, "IMP_ISP_Tuning_SetAeMin_Sec(" << ae_min.min_again << ")");
     }
@@ -224,28 +224,29 @@ int IMPSystem::init()
     LOG_DEBUG("# desired_sensor_fps = " << desired_sensor_fps);
     ret = IMP_ISP_Tuning_SetSensorFPS(desired_sensor_fps, 1);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_SetSensorFPS(" << desired_sensor_fps << ", 1)");
-    if (cfg->sensor.select & 0x2) {
+    if (NUM_SENSOR == 2) {
         ret = IMP_ISP_Tuning_SetSensorFPS_Sec(desired_sensor_fps, 1);
         LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_SetSensorFPS_Sec(" << desired_sensor_fps << ", 1)");
     }
 
     ret = IMP_ISP_Tuning_GetSensorFPS(&fps_num, &den);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorFPS(" << fps_num << ", " << den << ")");
-    if (cfg->sensor.select & 0x2) {
+    if (NUM_SENSOR == 2) {
         ret = IMP_ISP_Tuning_GetSensorFPS_Sec(&fps_num, &den);
         LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorFPS_Sec(" << fps_num << ", " << den << ")");
     }
 
-#if defined(PLATFORM_T21)
+// #if defined(PLATFORM_T21)
     //T20 T21 only set FPS if it is read after set.
-    uint32_t fps_num, fps_den;
-    ret = IMP_ISP_Tuning_GetSensorFPS(&fps_num, &fps_den);
-    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorFPS(" << fps_num << ", " << fps_den << ")");
-#endif
+//    uint32_t fps_num, fps_den;
+    ret = IMP_ISP_Tuning_GetSensorFPS(&fps_num, &den);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorFPS(" << fps_num << ", " << den << ")");
+// #endif
 
     // Set the ISP to DAY on launch
     ret = hal::isp::set_running_mode(IMPISP_RUNNING_MODE_DAY);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "SetISPRunningMode(" << IMPISP_RUNNING_MODE_DAY << ")");
+
 #endif // #if !defined(NO_TUNINGS)
 
     #if defined(NO_TUNINGS)
@@ -275,11 +276,11 @@ int IMPSystem::init()
 		ispmodule.bitRsv= 12;       /* [19 ~ 30] reserved 12 bits	*/
 		ispmodule.bitBypassMDNS= 1; /* [31] Dialogue Noise Suppression */
     }
-    ret = IMP_ISP_Tuning_SetModuleControl(&ispmodule);
-    LOG_DEBUG_OR_ERROR(ret, "# IMP_ISP_Tuning_SetModuleControl-bitBypassAG(" << ispmodule.bitBypassAG << ")");
+//    ret = IMP_ISP_Tuning_SetModuleControl(&ispmodule);
+//    LOG_DEBUG_OR_ERROR(ret, "# IMP_ISP_Tuning_SetModuleControl-bitBypassAG(" << ispmodule.bitBypassAG << ")");
 #endif  // no_tunings
 
-    LOG_INFO(" ### IMPSystem Done!");
+    LOG_INFO(" ### IMPSystem Done! ###");
     return ret;
 }
 

@@ -23,40 +23,6 @@ VideoWorker::~VideoWorker()
     LOG_DEBUG("VideoWorker destroyed for channel " << encChn);
 }
 
-#define GAIN_COUNT_MAX  50
-
-// for total gain
-#include <iostream>
-#include <vector>
-#include <numeric> // for std::accumulate
-
-class MovingAverage {
-public:
-    MovingAverage(size_t windowSize) : windowSize(windowSize) {}
-
-    double addValue(double newValue) {
-        if (data.size() == windowSize) {
-            // Subtract the oldest value from the sum before replacing it
-            sum -= data[index];
-            data[index] = newValue;
-            sum += newValue;
-            index = (index + 1) % windowSize; // Move index in a circle
-        } else {
-            // If the window is not yet full, just add the value
-            data.push_back(newValue);
-            sum += newValue;
-        }
-        // Return current average (handle the case where window isn't full yet)
-        return sum / data.size();
-    }
-
-private:
-    std::vector<double> data;
-    size_t windowSize;
-    size_t index = 0;
-    double sum = 0.0;
-};
-
 void VideoWorker::run()
 {
     LOG_DEBUG("Start video processing run loop for stream " << encChn);
@@ -66,11 +32,6 @@ void VideoWorker::run()
     uint32_t error_count = 0; // Keep track of polling errors
     unsigned long long ms = 0;
     bool run_for_jpeg = false;
-    uint32_t total_gain;
-    double total_gain_avg;
-    uint32_t count_gain_sample = 0;
-    uint32_t gain_count;
-    uint32_t max_gain_count = GAIN_COUNT_MAX;
 
     while (global_video[encChn]->running)
     {
@@ -79,17 +40,7 @@ void VideoWorker::run()
          */
         run_for_jpeg = (encChn == global_jpeg[0]->streamChn && global_video[encChn]->run_for_jpeg);
 
-        //  get Gain -  this only get isp_gain.
-        if (IMP_ISP_Tuning_GetTotalGain(&total_gain) == 0) {
-            // LOG_DEBUG("Total Gain: " << total_gain);
-            count_gain_sample ++;
-            gain_count = std::min(max_gain_count,count_gain_sample);
-            MovingAverage sma(gain_count);
-            total_gain_avg = sma.addValue(total_gain);
-            // LOG_DEBUG("Total Gain Average for " << GAIN_COUNT_MAX << " is <" << total_gain_avg << "> of count " << gain_count);
-        }
-
-        /* now we need to verify that
+         /* now we need to verify that
          * 1. a client is connected (hasDataCallback)
          * 2. a jpeg is requested
          */
@@ -262,14 +213,54 @@ void *VideoWorker::thread_entry(void *arg)
     LOG_DEBUG("VideoWorker Stream/encoder chn: " << encChn << " Group: " << encGrp << " Framesource:  " << fsChnNum);
 
     int ret;
-    global_video[encChn]->imp_framesource = IMPFramesource::createNew(global_video[encChn]->stream,
+#if 0
+// dual sensors:  set group and channels
+		switch (encChn) {
+			case 0:  /* main-sensor 0 h264 or h265 */
+				encChn = 0;
+                encGrp = 0;
+                fsChnNum = 0;
+				break;
+			case 1:  /* main-sensor 1 h264 or h265 */
+				encChn = 1;
+                encGrp = 1;
+                fsChnNum = 3;
+				break;
+			case 2:  /* main-sensor 0 jpeg, not used here */
+				encChn = 2;
+				encGrp = 0;
+                fsChnNum = 0;
+				break;
+			case 3:  /* main-sensor 1 jpeg, not used here */
+				encChn = 3;
+				encGrp = 1;
+                fsChnNum = 3;
+				break;
+			case 4:  /* sub-sensor 0, no direct mode */
+				encChn = 4;
+				encGrp = 2;
+                fsChnNum = 1;
+				break;
+			case 5:  /* sub-sensor 1, no direct mode */
+				encChn = 5;
+				encGrp = 3;
+                fsChnNum = 4;
+				break;
+			default:
+				LOG_DEBUG("unsupported encChn: " <<  encChn);
+				return 0;
+		}
+#endif
+        global_video[encChn]->imp_framesource = IMPFramesource::createNew(global_video[encChn]->stream,
                                                                       &cfg->sensor,  // need to move, add to global_video
                                                                       fsChnNum);
-    global_video[encChn]->imp_encoder = IMPEncoder::createNew(global_video[encChn]->stream,
+        global_video[encChn]->imp_encoder = IMPEncoder::createNew(global_video[encChn]->stream,
                                                               encChn,
                                                               encGrp,
+//                                                              fsChnNum,
                                                               global_video[encChn]->name);
-    global_video[encChn]->run_for_jpeg = false;
+        global_video[encChn]->run_for_jpeg = false;
+#if 1
 
     _stream *stream = global_video[encChn]->stream;
     if (strcmp(stream->format, "JPEG") != 0)
@@ -286,6 +277,7 @@ void *VideoWorker::thread_entry(void *arg)
 
         if (stream->osd.enabled)
         {
+//            osd = OSD::createNew(stream->osd, encGrp, encChn, global_video[encChn]->name);
 
             ret = IMP_System_Bind(&fs, &osd_cell);
             //LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&fs, &osd_cell)");
@@ -302,7 +294,7 @@ void *VideoWorker::thread_entry(void *arg)
             LOG_DEBUG_OR_ERROR(ret, "IMP_System_Bind-fs->enc(" << fsChnNum << "," << encChn << ")");
         }
     }
-
+#endif
     global_video[encChn]->imp_framesource->enable();
     // inform main that initialization is complete
     sh->has_started.release();

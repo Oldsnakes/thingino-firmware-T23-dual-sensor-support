@@ -181,10 +181,12 @@ extern bool global_restart_rtsp;
 extern bool global_restart_video;
 extern bool global_restart_audio;
 extern bool global_restart_motion;
+extern bool global_restart_daynight;
 
 extern bool global_osd_thread_signal;
 extern bool global_main_thread_signal;
 extern bool global_motion_thread_signal;
+extern bool global_daynight_thread_signal;
 extern std::atomic<char> global_rtsp_thread_signal;
 
 extern std::shared_ptr<jpeg_stream> global_jpeg[NUM_JPEG_CHANNELS];    // stream 2, 3

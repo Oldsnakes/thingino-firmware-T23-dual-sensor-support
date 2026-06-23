@@ -7,8 +7,8 @@
 
 using namespace std::chrono;
 bool ignoreInitialPeriod = true;
-int map_h = 8;
-int map_v = 6;
+int map_h = MAP_H_NUM;
+int map_v = MAP_V_NUM;
 
 static const std::vector<std::string> area_keys = {
     "CENTER",
@@ -57,8 +57,8 @@ void Motion::detect()
         LOG_DEBUG("White Light pin =  " << white_pin);
     #endif 
 
-    #define MOTOR_DH  300
-    #define MOTOR_DV  100
+    #define MOTOR_DH  MAP_DX * ((MAP_H_NUM / 2) + 1)
+    #define MOTOR_DV  MAP_DY * ((MAP_V_NUM / 2) - 1)
 
     if(init() != 0) return;
 
@@ -226,7 +226,10 @@ void Motion::detect()
                         }
                         LOG_DEBUG("*** Hot Spot is <" << area_keys[box_idx] << ">");
                         // hit CENTER:  nop
+//                        move_to_center(box_idx);
+
                         if (box_idx != CENTER) {
+#if 1
                             switch (box_idx) {
                                 case LEFT:
                                     trackTo(-MOTOR_DH, 0);
@@ -256,6 +259,7 @@ void Motion::detect()
                                     trackTo(0, MOTOR_DV);
                                     break;
                             }
+#endif
                             isMotorActive = true;
                             motorMoveEndTime = steady_clock::now(); // Start motor 
                         }   
@@ -313,6 +317,43 @@ void Motion::detect()
 
     LOG_DEBUG("Exit motion detect thread.");
 }
+
+#if 0
+int Motion::move_to_center(int box_idx) {
+    if (box_idx != CENTER) {
+        switch (box_idx) {
+            case LEFT:
+                trackTo(-MOTOR_DH, 0);
+                break;
+            case RIGHT:
+                trackTo(MOTOR_DH, 0);
+                break;
+            case UP:
+                trackTo(0, -MOTOR_DV);
+                break;
+            case DOWN:
+                trackTo(0, MOTOR_DV);
+            case UP_LEFT:
+                trackTo(-MOTOR_DH, 0);
+                trackTo(0, -MOTOR_DV);
+                break;
+            case UP_RIGHT:
+                trackTo(MOTOR_DH, 0);
+                trackTo(0, -MOTOR_DV);
+                break;
+            case DOWN_LEFT:
+                trackTo(-MOTOR_DH, 0);
+                trackTo(0, MOTOR_DV);
+                break;
+            case DOWN_RIGHT:
+                trackTo(MOTOR_DH, 0);
+                trackTo(0, MOTOR_DV);
+                break;
+        }
+    }
+    return 0;
+}
+#endif
 
 int Motion::trackTo(int x, int y) 
 {
