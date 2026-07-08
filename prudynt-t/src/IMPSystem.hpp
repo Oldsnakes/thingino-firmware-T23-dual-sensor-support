@@ -39,6 +39,7 @@ public:
 
     int init();
     int destroy();
+    int set_tuning(_image *image);
 
 private:
     IMPSensorInfo sinfo{};
