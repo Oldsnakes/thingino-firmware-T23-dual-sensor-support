@@ -66,7 +66,7 @@ default_for rtsp_password "thingino"
 </div>
 </nav>
 
-<div class="row row-cols-1 row-cols-lg-2">
+<div class="row row-cols-2 row-cols-lg-2">
 <div class="col mb-3">
 
 <div class="btn-toolbar" role="toolbar">
@@ -79,9 +79,52 @@ default_for rtsp_password "thingino"
 </div>
 </div>
 
-<p><img id="preview" src="/a/nostream.webp" class="img-fluid" alt="Image: Stream Preview"></p>
+<style>
+.canvas-container {
+    position: relative;
+    display: inline-block;
+}
 
-<% if [ "true" = "$has_motors" ]; then %><%in _motors.cgi %><% fi %>
+.overlayLayer{
+	display: none;
+	position: absolute;
+	pointerEvents: none;
+	border:2px solid #ff6666;
+	backgroundColor:transparent;
+    	top: 0;
+    	left: 0;
+    	width: 100%; 
+    	height: 100%;
+}
+
+.imgCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; 
+    height: 100%;
+    border: 1px solid black; /* Optional: adds a border to the canvas area */
+}
+</style>
+
+<div id="zoom-map" class="position-relative ">
+<div id="zoom-map" class="canvas-container" style="border: 2px solid #889988;">
+	<img id="preview" src="/x/ch0.mjpg" class="img-fluid" alt="Image: Stream 0 Preview">
+    	<canvas class="imgCanvas" id="imageCanvas"></canvas>
+	<div id="boxOnImage" class="overlayLayer"></div>
+</div>
+</div>
+
+<div id="Zoom-status">
+   Zoom Box   X: <span id="image_crop_left"></span>
+   , Y: <span id="image_crop_top"></span>
+   - ( <span id="image_crop_width"></span>
+   x <span id="image_crop_height"></span>
+   ) ==> [ <span id="image_scaler_outwidth"></span>
+   x <span id="image_scaler_outheight"></span>
+   ]
+</div>
+
 </div>
 
 <div class="col mb-3">
@@ -92,22 +135,28 @@ default_for rtsp_password "thingino"
 </div>
 
 <p class="small"></p>
-<p><img id="preview1" src="/a/nostream.webp" class="img-fluid" alt="Image: Preview" style="visibility: hidden;"><p>
+<div id="zoom-map1" class="position-relative ">
+<div id="zoom-map1" class="canvas-container" style="border: 2px solid #889988;">
+	<img id="preview1" src="/x/ch1.mjpg" class="img-fluid" alt="Image: Stream 1 Preview">
+    	<canvas class="imgCanvas" id="imageCanvas1"></canvas>
+	<div id="boxOnImage1" class="overlayLayer"></div>
+</div>
+</div>
 
 </div>
 </div>
     <style>
         .box {
             width: 500px;
-            height: 80px;
+            height: 85px;
             background-color: #303030; 
             border: 2px solid #505050;
             padding: 10px;
             margin: 10px;
         }
         .box1 {
-            width: 500px;
-            height: 120px;
+            width: 650px;
+            height: 515px;
             background-color: #303030; 
             border: 2px solid #505050;
             padding: 10px;
@@ -124,23 +173,20 @@ default_for rtsp_password "thingino"
 <div class="row row-cols-2 row-cols-lg-2">
 <div class="row g-2">
 
-<div class="box1" height=120px>
+<% if [ "true" = "$has_motors" ]; then %>
+<p class="medium">----- Pan and Tilt Control -----</p>
+<%in _motors.cgi %>
+<% fi %>
+
+<div class="box" height=120px>
 <div class="row g-2">
 <div class="col-6"><% field_switch "image_alt_sensor" "Dual Camera" %></div>
-<div class="col-6">
-<div class="mb-2 select" id="sensor_select_wrap">
-<label for="sensor_select" class="form-label">Camera Setting Select</label>
-<select class="form-select" id="sensor_select" name="sensor_select">
-<option value="1">Camera 1</option>
-<option value="2">Camera 2</option>
-<option value="3">Both 1/2</option>
-</select>
-</div>
-</div>
+<div class=col-6><% field_switch "image_zoom_enable" "Zoom Enabled" %></div>
 <div class="col-6"><% field_switch "image_hflip" "Flip horizontally" %></div>
 <div class="col-6"><% field_switch "image_vflip" "Flip vertically" %></div>
 </div>
 </div>
+<p class="large">----- Light Control -----</p>
 <div class="box">
 <div class="row g-2">
 <div class="col-6"><% field_switch "gpio_white" "White Light" %></div>
@@ -149,6 +195,25 @@ default_for rtsp_password "thingino"
 <div class="col-6"><% field_switch "gpio_ircut" "IR Cut" %></div>
 </div>
 </div>
+
+</div>
+
+<div class="col mb3">
+<div class="row g-2">
+<div class="col-4">
+<div class="mb-2 select" id="sensor_select_wrap">
+<label for="sensor_select" class="form-label">Camera Setting Select</label>
+<select class="form-select" id="sensor_select" name="sensor_select">
+<option value="3">Both 1/2</option>
+<option value="1">Camera 1</option>
+<option value="2">Camera 2</option>
+</select>
+</div>
+</div>
+<div class="col-6"> <p class="large">----- Image Control -----</p> </div>
+</div>
+<div class="box1">
+<div class="row g-2">
 <div class="col-3">
 <div class="mb-2 select" id="image_core_wb_mode_wrap">
 <label for="image_core_wb_mode" class="form-label">White Balance </label>
@@ -170,13 +235,12 @@ default_for rtsp_password "thingino"
 <div class="col-3"><% field_range "image_wb_rgain" "Red channel gain" "0,1024,1" %></div>
 <div class="col-3"><% field_range "image_ae_compensation" "<abbr title=\"Automatic Exposure\">AE</abbr> compensation" "0,255,1" %></div>
 <div class="col-2"><% field_switch "image_core_expr_mode" "Auto Exp" %></div>
-<div class="col-3"><% field_range "image_core_expr_time" "Time - msec ( 0 - 2234)" "0,2234,1" %></div>
-<div class="col-3"><% field_switch "image_again_mode" "Manual Gain" %></div>
+<div class="col-4"><% field_range "image_core_expr_time" "Time - msec ( 0 - 2234)" "0,2234,1" %></div>
+<div class="col-2"><% field_switch "image_again_mode" "Manual Gain" %></div>
 <div class="col-4"><% field_range "image_again_gain" "     Analog Gain (0-100,000)" "0,100000,100" %></div>
 </div>
-<div class="col mb3">
 <% field_switch "image_running_mode" "Black-and-white mode" %>
-<div class="row row-cols-1 row-cols-lg-3 g-2">
+<div class="row row-cols-1 row-cols-lg-4 g-2">
 <div class="col"><% field_range "image_brightness" "Brightness" "0,255,1" %></div>
 <div class="col"><% field_range "image_contrast" "Contrast" "0,255,1" %></div>
 <div class="col"><% field_range "image_saturation" "Saturation" "0,255,1" %></div>
@@ -192,8 +256,9 @@ default_for rtsp_password "thingino"
 <div class="col"><% field_range "image_backlight_compensation" "Backlight comp." "0,10,1" %></div>
 <div class="col"><% field_range "image_highlight_depress" "Highlight depress" "0,255,1" %></div>
 <div class="col"><% field_range "image_anti_flicker" "Anti-flicker" "0,2,1" %></div>
-
 </div>
+</div>
+
 </div>
 </div>
 </div>
@@ -443,7 +508,13 @@ const image_params = [
 	'dpc_strength', 'drc_strength', 'hflip', 'highlight_depress', 'hue',
 	'max_again', 'max_dgain', 'running_mode', 'saturation', 'sharpness',
 	'alt_sensor', 'alt_speed','again_mode', 'again_gain', 'core_expr_mode', 'core_expr_time',
-	'sinter_strength', 'temper_strength', 'vflip', 'wb_bgain', 'wb_rgain'
+	'sinter_strength', 'temper_strength', 'vflip', 'wb_bgain', 'wb_rgain',
+	'crop_left', 'crop_top', 'crop_width', 'crop_height',
+	'scaler_outwidth', 'scaler_outheight', 'zoom_enable'
+];
+
+const zoom_params = ['crop_left', 'crop_top', 'crop_width', 'crop_height',
+	'scaler_outwidth', 'scaler_outheight', 'zoom_enable'
 ];
 
 // gpio
@@ -589,12 +660,8 @@ async function handleMessage(msg) {
 				$(`#preview1`).style.display = 'block'; 
 				$(`#preview1`).style.visibility = 'visible'; 
 				if ($(`#preview_source_0`).checked) {
-					$('#preview').src='/x/ch0.mjpg';
-					$('#preview1').src='/x/ch1.mjpg';
 					$('#preview_fullsize').src='/x/ch0.mjpg';
 				} else {
-					$('#preview').src='/x/ch1.mjpg';
-					$('#preview1').src='/x/ch0.mjpg';
 					$('#preview_fullsize').src='/x/ch1.mjpg';
 				}
 	   		}
@@ -613,6 +680,15 @@ async function handleMessage(msg) {
                 	if (data.running_mode <= 1) 
                         	$('#image_running_mode').checked = (data.running_mode == 1);
 
+			if (data.zoom_enable)
+				$('#image_zoom_enable').checked = data.zoom_enable;
+			zoom_params.forEach((x) => {
+				if (typeof(data[x]) !== 'undefined') {
+					setValue(data, 'image', x);
+					($(`#image_${x}`)).textContent = data[x];
+					($(`#image_${x}`)).value = data[x];
+				}	
+			});
 			image_params.forEach((x) => {
 					if (typeof(data[x]) !== 'undefined')
 						setValue(data, 'image', x);
@@ -638,8 +714,6 @@ async function handleMessage(msg) {
 	{
 		data = msg.sensor;
 		if (data) {
-		//	sensor_params.forEach((x) => {
-		//		if (typeof(data[x]) !== 'undefined')
 			if (data.select !=='undfined') {
 				setValue(data, 'sensor', 'select');
 				const d = await loadConfigImage();
@@ -647,7 +721,6 @@ async function handleMessage(msg) {
 					$(`#preview_source_1`).click();
 				else 
 					$('#preview_source_0').click();
-	console.log('=>');
 			}
 		}
 	}
@@ -792,6 +865,7 @@ function saveValue(domain, name) {
 
 	let payload = `"${name}":${value}`
 	let thread = 0;
+	let sensor_def = '';
 	if (domain == 'audio') {
 		thread += ThreadAudio;
 		console.log(name, value);
@@ -808,13 +882,45 @@ function saveValue(domain, name) {
 		thread += ThreadRtsp;
 		thread += ThreadVideo;
 	} else {
-		// domain 'image' does not need a restart
+		if (domain == 'image') {
+			const ex = $(`#sensor_select`);
+			let sv = ex.value;
+			sensor_def = ',"sensor":{"select":'+sv+'}';
+			// domain 'image' does not need a restart
+		}
 	}
 
 	let json_actions = '';
 	if (thread > 0) json_actions = ',"action":{"restart_thread":'+thread+'}';
-	sendToEndpoint('{"'+domain+'":{'+payload+json_actions+'}}');
+	sendToEndpoint('{"'+domain+'":{'+ payload + "}" + sensor_def + json_actions +'}');
 }
+
+function saveZoom(domain,sv) {
+	sensor_def = '"sensor":{"select":'+sv+'}';
+	const payload =	'"image":{' + zoom_params.map((x) => `"${x}":` + $(`#${domain}_${x}`).value).join() + '}';
+	sendToEndpoint("{" + payload + "," + sensor_def + "}");
+}
+
+image_zoom_enable = true;
+var xr = 1;
+var yr = 1;
+var g_x0 = 0;
+var g_y0 = 0;
+var g_w0 = 300;
+var g_h0 = 200;
+image_crop_left.value= 0;
+image_crop_top.value= 0;
+image_crop_width.value= preview.naturalWidth;
+image_crop_height.value= preview.naturalHeight;
+image_zoom_enable.value = $('#image_zoom_enable').checked ? true : false;
+
+//  plane for draw box
+var drawCanvas = document.getElementById('imageCanvas');
+var drawCanvas1 = document.getElementById('imageCanvas1');
+// var ctx = drawCanvas.getContext('2d');
+//  inner image
+var img = document.getElementById('preview');
+var box = document.getElementById("boxOnImage");
 
 for (const i in [0, 1]) {
 	stream_params.forEach((x) => {
@@ -852,6 +958,10 @@ audio_params.forEach((x) => {
 	});
 });
 
+//$("#image_zoom_enable").addEventListener('change', ev =>
+//        sendToEndpoint('{"image":{"zoom_enable":'+ev.target.checked+'}}')); 
+
+
 image_params.forEach((x) => {
 	const el = $(`#image_${x}`);
 	if (!el) {
@@ -888,6 +998,7 @@ sensor_params.forEach((x) => {
 	}
 	el.addEventListener('change', (_) => {
 		saveValue('sensor', x);
+		// loadConfigImage();
 	});
 });
 
@@ -934,7 +1045,7 @@ $('#preview_source_0').addEventListener('click', () =>
 		$('#preview').style="border: 3px solid orange";
 		$('#preview_fullsize').src='/x/ch0.mjpg';
 	   if ($('#image_alt_sensor').checked) {
-		$('#preview1').src='/x/ch1.mjpg';
+			$('#preview1').src='/x/ch1.mjpg';
 		$('#preview1').style="border: 3px solid gray";
 	   }
 	 });
@@ -943,27 +1054,265 @@ $('#preview_source_1').addEventListener('click', () =>
 	   if ($('#image_alt_sensor').checked) {
 		$('#preview').src='/x/ch0.mjpg';
 		$('#preview').style="border: 3px solid gray";
-		$('#preview_fullsize').src='/x/ch0.mjpg';
 		$('#preview1').src='/x/ch1.mjpg';
 		$('#preview1').style="border: 3px solid orange";
 	   } else {
 		$('#preview').src='/x/ch1.mjpg';
 		$('#preview').style="border: 3px solid orange";
-		$('#preview_fullsize').src='/x/ch1.mjpg';
-	//	$('#preview1').src='/x/ch0.mjpg';
-	//	$('#preview1').style="border: 3px solid gray";
 	   }
+	   $('#preview_fullsize').src='/x/ch1.mjpg';
 	 });
 
+img.addEventListener('load', 
+    function get_current () {
+	//  load once
+	img.removeEventListener('load', get_current, false);
+	drawCanvas.width = img.naturalWidth;
+	drawCanvas.height = img.naturalHeight;
+	drawCanvas1.offsetTop = 0;
+	drawCanvas1.width = img.naturalWidth;
+	drawCanvas1.height = img.naturalHeight;
+ 	xr = drawCanvas.width / drawCanvas.offsetWidth;
+ 	yr = drawCanvas.height / drawCanvas.offsetHeight;
+}, false);
 
-loadConfig().then(() => { $('#preview').src = '/x/ch0.mjpg' });
- 	if ($(`#image_alt_sensor`).checked) {
-		loadConfig().then(() => { $('#preview1').src = '/x/ch1.mjpg' });
-}
-//	sendToEndpoint('{"image":{"again_gain":15000}}');
+
+loadConfig().then(() => 
+	{ 
+		$('#preview').src = '/x/ch0.mjpg'; 
+ 		if ($(`#image_alt_sensor`).checked) {
+			$('#preview1').src = '/x/ch1.mjpg';
+		 }
+		motor.style.visibility = "visible";
+		motor.style.position = "relative";
+		motor.style.top = '20px';
+                motor.style.left = '10px';
+                motor.style.width = '18vh';
+                motor.style.height= '18vh';
+
+		//motor.style.backgroundColor = "#444433ff"; 
+	});
+
+//const Canvases = document.querySelectorAll('.imgCanvas');
+
+//Canvases.forEach(canvas => {
+//    canvas.addEventListener('dblclick', handleMouseDoubleClick);
+//});
+
+window.onload = 
+    function() {
+	var box = document.getElementById("boxOnImage");
+	//box.style.pointerEvents = "none";
+
+        function isInImage(x, y) {
+        	var innerImage = document.getElementById("imageCanvas");
+
+                if (innerImage.offsetHeight < y || innerImage.offsetWidth < x) {
+                        return false;
+                } else {
+                        return true;
+                }
+
+        }
+
+        var top = 0, left = 0, width = 0, height = 0;
+	let xs = -1, ys = -1, xe = -1, ye = -1;
+	var moveEnable = false;
+	var p_function = 0;  // previous mouse function
+
+	// mouse functions
+        imageCanvas.addEventListener("mousemove", function (e) {
+		box = document.getElementById("boxOnImage");
+		handleMouseMove(e);
+        });
+        imageCanvas1.addEventListener("mousemove", function (e) {
+		box = document.getElementById("boxOnImage1");
+		handleMouseMove(e);
+        });
+	function handleMouseMove(e) {
+		if (!moveEnable) return;
+	    	p_function = 3;
+                var x = e.offsetX;
+                var y = e.offsetY;
+                if (isInImage(x, y)) {
+                     if ((xe == -1 && ye == -1) && (xs != -1 && ys != -1)) {
+                            createRectangleOnImage(xs, x, ys, y);
+                     }
+                } else {
+			p_function = 0;
+			moveEnable = false;
+                	xs = -1; ys = -1; xe = -1; ye = -1;
+                	removeRectangleOnImage();
+	      	}
+	}
+	//
+        imageCanvas.addEventListener("mousedown", function (e) {
+		box = document.getElementById("boxOnImage");
+		handleMouseDown(e);
+	});
+        imageCanvas1.addEventListener("mousedown", function (e) {
+		box = document.getElementById("boxOnImage1");
+		handleMouseDown(e);
+	});
+	function handleMouseDown(e) {
+	    	if (p_function == 2) p_function = 1;
+                var x = e.offsetX;
+                var y = e.offsetY;
+                if (isInImage(x, y)) {
+    			//ctx.lineWidth = 6; // Border thickness
+			//ctx.clearRect(g_x0-2, g_y0-2, g_w0+6, g_h0+6);
+                        if (xs == -1 && ys == -1) {
+                            xs = x;
+                            ys = y;
+                        } else if (xe == -1 && ye == -1) {
+                            xe = x;
+                            ye = y;
+                            createRectangleOnImage(xs, xe, ys, ye);
+                        } else {
+                            xe = x;
+                            ye = y;
+                            createRectangleOnImage(xs, xe, ys, ye);
+                        }
+                }
+		moveEnable = true;
+	}
+	//
+        imageCanvas.addEventListener("mouseup", function (e) {
+		box = document.getElementById("boxOnImage");
+		handleMouseUp(e);
+	});
+        imageCanvas1.addEventListener("mouseup", function (e) {
+		box = document.getElementById("boxOnImage1");
+		handleMouseUp(e);
+	});
+	function handleMouseUp(e) {
+		// let i, j;
+		// let xsc, ysc, xec, yec;	
+
+            var x = e.offsetX;
+            var y = e.offsetY;
+         if (isInImage(x, y)) {
+	    let x0, y0, x1, y1, w0, h0;
+	    moveEnable = false;
+            xs = -1; ys = -1; xe = -1; ye = -1;
+            removeRectangleOnImage();
+	    if (p_function == 3) {  // was moving, end of box
+ 		xr = drawCanvas.width / drawCanvas.offsetWidth;
+ 		yr = drawCanvas.height / drawCanvas.offsetHeight;
+ 		// xr = image_scaler_outwidth.value / canvas.offsetWidth;
+ 		// yr = image_scaler_outheight.value / canvas.offsetHeight;
+		x0 = Math.trunc(left * xr);
+		y0 = Math.trunc(top * yr);
+		w0 = Math.trunc(width * xr);
+		h0 = Math.trunc(height * yr);
+		x1 = x0 + w0 -1;
+		y1 = y0 + h0 -1;
+		g_x0 = x0; g_y0 = y0; g_w0 = w0; g_h0 = h0;
+		image_crop_left.value = x0;
+		image_crop_top.value = y0;
+		image_crop_width.value = w0;
+		image_crop_height.value = h0;
+		image_crop_left.textContent= x0;
+		image_crop_top.textContent = y0;
+		image_crop_width.textContent = w0;
+		image_crop_height.textContent = h0;
+		$('#image_zoom_enable').value = true;
+		if (e.currentTarget.id == 'imageCanvas')
+			sv = 1;
+		else 
+			sv = 2;
+
+		saveZoom("image",sv);
+	   } else {
+		if (e.currentTarget.id == 'imageCanvas')
+			$(`#preview_source_0`).click();
+		else 
+			$('#preview_source_1').click();
+		}
+	} 
+	    p_function = 2;
+        }
+	//  double click the mouse, set for full box/MAP
+        imageCanvas.addEventListener("dblclick", function (e) {
+		box = document.getElementById("boxOnImage");
+		handleMouseDoubleClick(e);
+	});
+        imageCanvas1.addEventListener("dblclick", function (e) {
+		box = document.getElementById("boxOnImage1");
+		handleMouseDoubleClick(e);
+	});
+	function handleMouseDoubleClick(e) {
+                xs = -1; ys = -1; xe = -1; ye = -1;
+		let x0, y0, w0, h0;
+                removeRectangleOnImage();
+                width = img.naturalWidth;
+                height = img.naturalHeight;
+                x0 = 0;
+                y0 = 0;
+		image_crop_left.value = 0;
+		image_crop_top.value = 0;
+		image_crop_width.value = width;
+		image_crop_height.value = height;
+		image_crop_left.textContent= 0;
+		image_crop_top.textContent = 0;
+		image_crop_width.textContent = width;
+		image_crop_height.textContent = height;
+		$('#image_zoom_enable').value = false;
+		if (e.currentTarget.id == 'imageCanvas')
+			sv = 1;
+		else 
+			sv = 2;
+
+		saveZoom("image",sv);
+        }
+	//  keyboard function
+        document.addEventListener("keyup", function (e) {
+                 // <27>: escape key Code
+                 if (e.keyCode == 27) {
+                        xs = -1; ys = -1; xe = -1; ye = -1;
+                        removeRectangleOnImage();
+                 }
+        });
+	// draw mouse move box image 
+        function createRectangleOnImage(xs, xe, ys, ye) {
+		box.style.pointerEvents = "none";
+                if (box.style.display != 'block') {
+                       box.style.display = 'block';
+                }
+                top = 0; left = 0; width = 0; height = 0;
+		let t;
+                if (ye > ys) {
+                	height = (ye - ys);
+                        top = ys;
+                } else {
+                        height = (ys - ye);
+                        top = ye;
+                }
+
+                if (xe > xs) {
+                        width = (xe - xs);
+                        left = xs;
+                } else {
+                        width = (xs - xe);
+                        left = xe;
+                }
+
+                box.style.top = Number(top) + "px";
+                box.style.left = Number(left) + "px";
+                box.style.width = Number(width) + "px";
+                box.style.height = Number(height) + "px";
+                if (box.style.display != 'block') {
+                       box.style.display = 'block';
+                }
+
+        }
+	// erase mouse move box image
+        function removeRectangleOnImage() {
+                    box.style.display = "none";
+        }
+}();
+
 </script>
 
 <%in _footer.cgi %>
-
-
 
