@@ -1,7 +1,7 @@
 #!/bin/haserl
 <%in _common.cgi %>
 <%
-page_title="Motion Click Map"
+page_title="Motion Map"
 %>
 <%in _header.cgi %>
 
