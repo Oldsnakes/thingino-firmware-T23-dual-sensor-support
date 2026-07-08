@@ -305,13 +305,10 @@ int main(int argc, const char *argv[])
         // start daynight server
         if (global_restart_video || global_restart_daynight || startup)
         {
-//            if (cfg->daynight.enable)
-//            {
-                LOG_DEBUG("Daynight enabled");
-                int ret = pthread_create(&daynight_thread, nullptr, Daynight::run, &daynight);
-                LOG_DEBUG_OR_ERROR(ret, "create daynight thread");
-                global_daynight_thread_signal = true;
-//            }
+            LOG_DEBUG("Daynight enabled");
+            int ret = pthread_create(&daynight_thread, nullptr, Daynight::run, &daynight);
+            LOG_DEBUG_OR_ERROR(ret, "create daynight thread");
+            global_daynight_thread_signal = true;
         }
 
 
