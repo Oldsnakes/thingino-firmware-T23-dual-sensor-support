@@ -98,6 +98,7 @@ struct _regions {
     int uptime;
     int logo;
 };
+
 struct _general {
     const char *loglevel;
     int osd_pool_size;
@@ -105,6 +106,7 @@ struct _general {
     bool timestamp_validation_enabled;
     bool audio_debug_verbose;
 };
+
 struct _rtsp {
     bool enable;
     int port;
@@ -119,6 +121,7 @@ struct _rtsp {
     float packet_loss_threshold;
     float bandwidth_margin;
 };
+
 struct _sensor {
     int fps;
     int width;
@@ -136,6 +139,7 @@ struct _sensor {
     int id;
     int select;
 };
+
 struct _image {
     int contrast;
     int sharpness;
@@ -177,36 +181,37 @@ struct _image {
 	int crop_top;
 	int crop_width;
 	int crop_height;
-    double zoom_factor;
+    int zoom_factor;  // x 10
+    int zoom_limit;  // x 10
 };
 
 // TW:  GPIO support
 struct _gpio {
-        int    ir850;
-        int    ir940;
-        int    white;
-        int    ircut;
-        int    sensor_switch;
+    int    ir850;
+    int    ir940;
+    int    white;
+    int    ircut;
+    int    sensor_switch;
 };
 
 // TW:  Daynight support
 struct _daynight {
-        bool    enable;
-        bool    ir850_enable;
-        bool    ir940_enable;
-        bool    white_enable;
-        bool    ircut_enable;
-        bool    color_enable;
-        int     sensor_select;
-        int     low_threshold;
-        int     up_threshold;
-        int     sample_time;
-        int     hold_count;
-        bool    night_mode;
-        bool    log;
+    bool    enable;
+    bool    ir850_enable;
+    bool    ir940_enable;
+    bool    white_enable;
+    bool    ircut_enable;
+    bool    color_enable;
+    int     sensor_select;
+    int     low_threshold;
+    int     up_threshold;
+    int     sample_time;
+    int     hold_count;
+    bool    night_mode;
+    bool    log;
 };
 
-// TW:  Motor control
+//  Motor control
 struct _motor {
     const char    *cmd;
     int     x;
@@ -227,6 +232,8 @@ struct _motor {
     // tracking
     int     box_dx;
     int     box_dy;
+    int     map_dx;
+    int     map_dy;
 };
 
 #if defined(AUDIO_SUPPORT)
@@ -253,6 +260,7 @@ struct _audio {
     int buffer_cap_frames;
 };
 #endif
+
 struct _osd {
     int font_size;
     int font_stroke_size;
@@ -289,6 +297,7 @@ struct _osd {
     _stream_stats stats;
     std::atomic<int> thread_signal;
 };
+
 struct _stream {
     bool direct_mode;
     int gop;
@@ -327,6 +336,7 @@ struct _stream {
     bool audio_enabled;
 #endif
 };
+
 struct _motion {
     int monitor_stream;
     int debounce_time;
@@ -362,6 +372,7 @@ struct _motion {
     std::array<roi, 52> rois;
     const char *roi_x;  //  dummy ROIs carrier
 };
+
 struct _websocket {
     bool enabled;
     bool ws_secured;
@@ -371,6 +382,7 @@ struct _websocket {
     const char *name;
     const char *token{"auto"};
 };
+
 struct _sysinfo {
     const char *cpu = nullptr;
 };
@@ -499,8 +511,3 @@ class CFG {
 // The configuration is kept in a global singleton that's accessed via this
 // shared_ptr.
 extern std::shared_ptr<CFG> cfg;
-
-//extern std::atomic<uint32_t> global_time_interval;  // in ms
-//extern std::atomic<int> global_Mipi_sw_state;
-//extern std::atomic<int> global_time_delay;
-//extern int64_t last_sw_time;

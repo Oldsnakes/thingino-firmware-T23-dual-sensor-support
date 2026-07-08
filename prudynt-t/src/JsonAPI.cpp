@@ -281,8 +281,6 @@ namespace {
         add_boolk("zoom_enable", std::string(root)+".zoom_enable",
             []{ hal::isp::set_zoom_enable(true); },
             []{ hal::isp::set_zoom_enable(false); });
-//            []{ hal::isp::set_FramesourceAttr(true); },
-//            []{ hal::isp::set_FramesourceAttr(false); });
  
             // WB bundle
         if (JsonValue* v = obj_get(obj, "core_wb_mode")){
@@ -653,7 +651,6 @@ namespace {
                     setter(); 
                 }
                 add_key(out,s2,key); 
-//                add_num(out, cfg->get<int>(path)); 
                 add_num(out, value); 
                 wrote=true;
             }
@@ -683,7 +680,6 @@ namespace {
         add_int("map_dim_h","motion.map_dim_h");
         add_int("map_dim_v","motion.map_dim_v");
         add_int_s("selected_tile","motion.selected_tile", [&value]{ hal::isp::center_tile(value); });
-//        add_boolk_m("move","motion.move");
 
         if (JsonValue* rois = obj_get(obj, "rois")){
             if (rois->type == JSON_NULL)  // send rois from cfg back to WebUI

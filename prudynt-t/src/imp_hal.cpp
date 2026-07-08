@@ -21,6 +21,8 @@
 extern void MakeTables(int q, uint8_t *lqt, uint8_t *cqt);
 
 namespace hal {
+    bool zoom_active = false;
+
 
 static PlatformCaps g_caps = {
     // Encoder capabilities (must match struct order)
@@ -474,7 +476,7 @@ int set_hue(unsigned char val)
 #endif
 }
 
-int set_hflip(bool enable)
+int set_hflip(bool enable)  // T23 isp do not have get for second sensor and get HVFlip_sec does not maintain status
 {
 #if defined(PLATFORM_T40) || defined(PLATFORM_T41)
     // T40 uses combined HVFLIP function
@@ -482,16 +484,23 @@ int set_hflip(bool enable)
     // This is a limitation - we can't set H and V independently on T40
     LOG_DEBUG("set_hflip: T40 uses combined HVFLIP - feature limited");
     return 0; // TODO: implement combined flip handling
-#elif defined(PLATFORM_T23)   // can be used for T40/T41
+#elif defined(PLATFORM_T23)  
     // use HVFLIP
+    int ret = 0;
     IMPISPHVFLIP hvflip;
-    int ret = IMP_ISP_Tuning_GetHVFlip(&hvflip);
-    hvflip = enable ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_H_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_H_MODE);
-
-    LOG_DEBUG("hflip: " << hvflip);
-    ret = 0;
-    if (cfg->sensor.select & 0x2) ret += IMP_ISP_Tuning_SetHVFLIP_Sec(hvflip);
-    if (cfg->sensor.select & 0x1) ret += IMP_ISP_Tuning_SetHVFLIP(hvflip); 
+//    ret = IMP_ISP_Tuning_GetHVFlip(&hvflip);
+    if (cfg->sensor.select & 0x2) {
+        hvflip = (IMPISPHVFLIP) (cfg->image1.vflip ? IMPISP_FLIP_V_MODE : 0);
+        hvflip = enable ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_H_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_H_MODE);
+        LOG_DEBUG("#hflip 1: " << hvflip);
+        ret += IMP_ISP_Tuning_SetHVFLIP_Sec(hvflip);
+    }
+    if (cfg->sensor.select & 0x1) {
+        hvflip = (IMPISPHVFLIP) (cfg->image0.vflip ? IMPISP_FLIP_V_MODE : 0);
+        hvflip = enable ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_H_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_H_MODE);
+        LOG_DEBUG("#hflip 0: " << hvflip);
+        ret += IMP_ISP_Tuning_SetHVFLIP(hvflip); 
+    }
     return ret;
 #else
     IMPISPTuningOpsMode mode = enable ? IMPISP_TUNING_OPS_MODE_ENABLE : IMPISP_TUNING_OPS_MODE_DISABLE;
@@ -505,20 +514,27 @@ int set_vflip(bool enable)
     // T40 uses combined HVFLIP function
     LOG_DEBUG("set_vflip: T40 uses combined HVFLIP - feature limited");
     return 0; // TODO: implement combined flip handling
-#elif defined(PLATFORM_T23)    // can be used for T40/T41
+#elif defined(PLATFORM_T23)    
     // use HVFLIP
+    int ret = 0;
     IMPISPHVFLIP hvflip;
-    int ret = IMP_ISP_Tuning_GetHVFlip(&hvflip);
-    hvflip = enable ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_V_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_V_MODE);
-
-    LOG_DEBUG("hflip: " << hvflip);
-    ret = 0;
-    if (cfg->sensor.select & 0x2) ret += IMP_ISP_Tuning_SetHVFLIP_Sec(hvflip);
-    if (cfg->sensor.select & 0x1) ret += IMP_ISP_Tuning_SetHVFLIP(hvflip); 
+//    ret = IMP_ISP_Tuning_GetHVFlip(&hvflip);
+    if (cfg->sensor.select & 0x2) {
+        hvflip = (IMPISPHVFLIP) (cfg->image1.hflip ? IMPISP_FLIP_H_MODE : 0);
+        hvflip = enable ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_V_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_V_MODE);
+        LOG_DEBUG("#vflip 1: " << hvflip);
+        ret += IMP_ISP_Tuning_SetHVFLIP_Sec(hvflip);
+    }
+    if (cfg->sensor.select & 0x1) {
+        hvflip = (IMPISPHVFLIP) (cfg->image0.hflip ? IMPISP_FLIP_H_MODE : 0);
+        hvflip = enable ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_V_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_V_MODE);
+        LOG_DEBUG("#vflip 0: " << hvflip);
+        ret += IMP_ISP_Tuning_SetHVFLIP(hvflip); 
+    }
     return ret;
 #else
     IMPISPTuningOpsMode mode = enable ? IMPISP_TUNING_OPS_MODE_ENABLE : IMPISP_TUNING_OPS_MODE_DISABLE;
-    return IMP_ISP_Tuning_SetISPHflip(mode);
+    return IMP_ISP_Tuning_SetISPVflip(mode);
 #endif
 }
 
@@ -769,6 +785,7 @@ void touch_AE_AGain()
     ret = IMP_ISP_Tuning_SetMaxAgain_Sec(ret_val);
 }
 
+// for debug
 void ae_status()
 {
     int ret = 0;
@@ -924,26 +941,38 @@ int set_core_expr_time(unsigned int val)
 #endif
 }
 
+#undef ZOOM_DEBUG
+
 int set_zoom_enable(bool enable)
 {
-    LOG_DEBUG("image: zoom enable <== sensor.select " << cfg->get<int>("sensor.select"));
-    switch (cfg->get<int>("sensor.select")) {
-        case 1: // sensor 0 (cam 1)
-            set_FramesourceAttr(enable, 0);
-            break;
-        case 2: // sensor 1 (cam 2)
-            set_FramesourceAttr(enable, 1);
-            break;
-        case 3: // both sensor
-            set_FramesourceAttr(enable, 0);
-            set_FramesourceAttr(enable, 1);
-            break;
-        default:
-            LOG_DEBUG("Invalid image config request: " << cfg->get<int>("sensor.select"));
-            break;
+    LOG_DEBUG("image: zoom enable, sensor " << cfg->get<int>("sensor.select") << " -- " << (enable ? "enable":"disable"));
+    if (!zoom_active)  {
+        switch (cfg->get<int>("sensor.select")) {
+            case 1: // sensor 0 (cam 1)
+                zoom_active = true;
+                set_FramesourceAttr(enable, 0);
+                zoom_active = false;
+                break;
+            case 2: // sensor 1 (cam 2)
+                zoom_active = true;
+                set_FramesourceAttr(enable, 1);
+                zoom_active = false;
+                break;
+            case 3: // both sensor (cam 1/2)
+                zoom_active = true;
+                set_FramesourceAttr(enable, 0);
+                set_FramesourceAttr(enable, 1);
+                zoom_active = false;
+                break;
+            default:
+                LOG_DEBUG("Invalid image config request: " << cfg->get<int>("sensor.select"));
+                break;
+        }
+        return 0;
+    } else {
+        LOG_ERROR("image: zoom in progress!  Ignore command.");
+        return -1;
     }
-
-    return 0;
 }
 
 int set_FramesourceAttr(bool enable, int sensor)
@@ -974,77 +1003,126 @@ int set_FramesourceAttr(bool enable, int sensor)
 
     ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr);
     LOG_DEBUG("* Read Channel " << chnNr << " configuration current setting:");
-    LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
-    LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
-    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
+    LOG_DEBUG("  pic: " << chnAttr.picWidth << "x" << chnAttr.picHeight);
+    LOG_DEBUG("  crop.enable=" << chnAttr.crop.enable << " crop=" << chnAttr.crop.width << "x" << chnAttr.crop.height);
+    LOG_DEBUG("      Attr pos <-" << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
     LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
-    LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
-    LOG_DEBUG("  fps=" << chnAttr_r.outFrmRateNum << "/" << chnAttr_r.outFrmRateDen << " nrVBs=" << chnAttr_r.nrVBs << " pixFmt=" << chnAttr.pixFmt);
+    LOG_DEBUG("  scaler.enable=" << chnAttr.scaler.enable << " ext=" << chnAttr.scaler.outwidth << "x" << chnAttr.scaler.outheight);
+    LOG_DEBUG("  fps=" << chnAttr.outFrmRateNum << "/" << chnAttr.outFrmRateDen << " nrVBs=" << chnAttr.nrVBs << " pixFmt=" << chnAttr.pixFmt);
+    LOG_DEBUG("  vflip = " << (image->vflip ? "true":"false") << " hflip = " << (image->hflip ? "true":"false") );
+    LOG_DEBUG("  zoom_factor = " << image->zoom_factor << " zoom_limit = " << image->zoom_limit);
+        
+    if (image->crop_width < 16 || image->crop_height < 16) enable = false;  // too small, treat as reset
 
     if (enable) {
-//        chnAttr.crop.enable = image->crop_enable;
         chnAttr.crop.enable = 1;
-        chnAttr.crop.top = image->crop_top;
-        chnAttr.crop.left = image->crop_left;
         chnAttr.crop.width = stream->width;
         chnAttr.crop.height = stream->height;
-
-//        chnAttr.scaler.enable = image->scaler_enable;
         chnAttr.scaler.enable = 1;
         chnAttr.picWidth = stream->width;
         chnAttr.picHeight = stream->height;
 
-        double fw, fh;
-        fw = (double) stream->width / image->crop_width;
-        fh = (double) stream->height / image->crop_height;
+        if (!image->hflip) {
+            chnAttr.crop.left = (image->crop_left + chnAttr.crop.left) / ((double) image->zoom_factor / 10);
+            image->crop_left = chnAttr.crop.left;
+         } else {
+            chnAttr.crop.left = stream->width - (image->crop_left + image->crop_width) + ( chnAttr.crop.left / 
+                ((double) image->zoom_factor / 10));
+            image->crop_left = chnAttr.crop.left;
+            LOG_DEBUG("* HFLIP -> left = " << chnAttr.crop.left  << " = (" << (chnAttr.crop.width + chnAttr.crop.left) << ")");
+        }
+        if (!image->vflip) {
+            chnAttr.crop.top = (image->crop_top + chnAttr.crop.top) / ((double) image->zoom_factor / 10);
+            image->crop_top = chnAttr.crop.top;
+        } else {
+            chnAttr.crop.top = stream->height - (image->crop_top + image->crop_height) + (chnAttr.crop.top / 
+                ((double) image->zoom_factor / 10));
+            image->crop_top = chnAttr.crop.top;
+            LOG_DEBUG("* VFLIP -> top = " << chnAttr.crop.top << " = (" << (chnAttr.crop.height + chnAttr.crop.top) << ")");
+        }
+
+        int crop_x1, crop_y1;
+        crop_x1 = chnAttr.crop.left + chnAttr.crop.width;
+        crop_y1 = chnAttr.crop.top + chnAttr.crop.height;
+
+        // zoom factor and limit are x10 of actual
+        int fw, fh;
+        fw = stream->width * 10 / image->crop_width;
+        fh = stream->height * 10 / image->crop_height;
 
         if (fw > fh) zoom_factor = fh;
         else zoom_factor = fw;
+        // re-scale on top of existing scale 
+        zoom_factor *=  (double) image->zoom_factor / 10;
+        LOG_DEBUG("-- Zoom factors:  zoom = " << zoom_factor << " (fw = " << fw << " fh = " << fh << ")  (/ 10)");
 
-        LOG_DEBUG("-- Zoom factors:  zoom = " << zoom_factor << " (fw = " << fw << " fh = " << fh << ")");
-        // zoom is limited by scale dim at 3200x1800 / 1280x720
-        if (zoom_factor > 2.5) zoom_factor = 2.5;
-        if (zoom_factor < 1) zoom_factor = 1; 
+        // zoom is limited by scale dim at 3200x1800 / 1280x720, 200 MHZ clock = 2.5x limited
+        if (zoom_factor > image->zoom_limit) zoom_factor = image->zoom_limit;
+        if (zoom_factor < 10) zoom_factor = 10; // = 1x
+        LOG_DEBUG("-> Zoom factor = " << zoom_factor << " (/ 10)");
 
-        chnAttr.scaler.outwidth = (int) (stream->width * zoom_factor);
-        chnAttr.scaler.outheight = (int) (stream->height * zoom_factor);
-        chnAttr.crop.left *= zoom_factor;
-        chnAttr.crop.top *= zoom_factor;
-    } else 
-    {
-        chnAttr.crop.enable = 0;
-        chnAttr.scaler.enable = 0;
-        chnAttr.crop.top = image->crop_top;
-        chnAttr.crop.left = image->crop_left;
+        chnAttr.scaler.outwidth = (int) (stream->width * ((double) zoom_factor / 10));
+        chnAttr.scaler.outheight = (int) (stream->height * ((double) zoom_factor / 10));
+        chnAttr.crop.left *= (double) zoom_factor / 10;
+        chnAttr.crop.top *= (double) zoom_factor / 10;
+
+    } else {    // disable Zoom
+        chnAttr.crop.left = 0;
+        image->crop_left = 0;
+        chnAttr.crop.top = 0;
+        image->crop_top = 0;
         chnAttr.crop.width = stream->width;
         chnAttr.crop.height = stream->height;
         chnAttr.scaler.outwidth = stream->width;
         chnAttr.scaler.outheight = stream->height;
         chnAttr.picWidth = stream->width;
         chnAttr.picHeight = stream->height;
+        zoom_factor = 10;  // x10
+        // reset configuration first, for future readback
+        LOG_DEBUG("-> Zoom reset Channel " << chnNr << ", disable");
+        ret = IMP_FrameSource_DisableChn(chnNr); 
+        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_DisableChn(" << chnNr << ")");
+        ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);  // reset values before disable the scaler/crop
+        LOG_DEBUG_OR_ERROR(ret, "*-* IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
+        ret = IMP_FrameSource_EnableChn(chnNr);
+        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_EnableChn(" << chnNr << ")");
+        ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
+#ifdef ZOOM_DEBUG
+        LOG_DEBUG("@0 Read Channel " << chnNr << " configuration Read back:");
+        LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
+        LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
+        LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
+        LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
+#endif
+        // now, disable Zoom
+        chnAttr.scaler.enable = 0;
+        chnAttr.crop.enable = 0;
     }
 
     chnAttr.crop.width &= ~15; // 16 pixel boundary
     chnAttr.crop.height &= ~15; // 16 pixel boundary
     chnAttr.scaler.outwidth &= ~15; // 16 pixel boundary
-    chnAttr.scaler.outheight &= ~15; // 16 pixel boundary
+    chnAttr.scaler.outheight &= ~7; // 8 pixel boundary
     chnAttr.crop.left &= ~1; // 2 pixel boundary
     chnAttr.crop.top &= ~1; // 2 pixel boundary
 
-    if ((chnAttr.crop.left + chnAttr.crop.width) > chnAttr.scaler.outwidth)
+    if ((chnAttr.crop.left + chnAttr.crop.width) > chnAttr.scaler.outwidth) {
         chnAttr.crop.left = chnAttr.scaler.outwidth - chnAttr.crop.width;
-    if ((chnAttr.crop.top + chnAttr.crop.height) > chnAttr.scaler.outheight)
+        image->crop_left = chnAttr.crop.left / ((double) zoom_factor / 10);
+    }
+    if (chnAttr.crop.left > chnAttr.scaler.outwidth) {
+        chnAttr.crop.left = chnAttr.scaler.outwidth;
+        image->crop_left = chnAttr.crop.left / ((double) zoom_factor / 10);
+    }
+    if ((chnAttr.crop.top + chnAttr.crop.height) > chnAttr.scaler.outheight) {
         chnAttr.crop.top = chnAttr.scaler.outheight - chnAttr.crop.height;
+        image->crop_top = chnAttr.crop.top / ((double) zoom_factor / 10);
+    } 
+    if (chnAttr.crop.top > chnAttr.scaler.outheight) {
+        chnAttr.crop.top = chnAttr.scaler.outheight;
+        image->crop_top = chnAttr.crop.top / ((double) zoom_factor / 10);
+    }
 
-    if (chnAttr.crop.left <= 0) chnAttr.crop.left = 0;
-    if (chnAttr.crop.top <= 0) chnAttr.crop.top = 0;
-
-    chnAttr.crop.left &= ~1; // 2 pixel boundary
-    chnAttr.crop.top &= ~1; // 2 pixel boundary
-
-    image->crop_left = chnAttr.crop.left / zoom_factor;
-    image->crop_top = chnAttr.crop.top / zoom_factor;
-    
     image->crop_width = chnAttr.crop.width;
     image->crop_height = chnAttr.crop.height;
     image->scaler_outwidth = chnAttr.scaler.outwidth;
@@ -1052,47 +1130,58 @@ int set_FramesourceAttr(bool enable, int sensor)
 
     image->zoom_factor = zoom_factor;
 
-    LOG_DEBUG("-> Set to Channel " << chnNr << " configuration (conf-attr):");
+    ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
+#ifdef ZOOM_DEBUG
+    LOG_DEBUG("@1 Read Channel " << chnNr << " configuration Read back:");
+    LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
+    LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
+    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
+    LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
+#endif
+    LOG_DEBUG("-> Set Channel " << chnNr << " configuration (attr):");
     LOG_DEBUG("  pic: " << chnAttr.picWidth << "x" << chnAttr.picHeight);
     LOG_DEBUG("  crop.enable=" << chnAttr.crop.enable << " crop=" << chnAttr.crop.width << "x" << chnAttr.crop.height);
     LOG_DEBUG("  scaled Attr pos <-" << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
     LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
     LOG_DEBUG("  scaler.enable=" << chnAttr.scaler.enable << " ext=" << chnAttr.scaler.outwidth << "x" << chnAttr.scaler.outheight << 
-                    "(x" << zoom_factor << ")");
+                    "(x" << zoom_factor << "/10)");
 
-//    LOG_DEBUG("Channel " << chnNr << " ready to change attribute for zoom.");
-    // need to enable first then change zoom settings
-        ret = IMP_FrameSource_DisableChn(chnNr);
+    ret = IMP_FrameSource_DisableChn(chnNr);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_DisableChn(" << chnNr << ")");
-    usleep(10000);
-    // enable 
-#if 1
-        ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
+
+    // set new zoom
+    ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
     LOG_DEBUG_OR_ERROR(ret, "* * IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
-#endif
-        ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
-    LOG_DEBUG("@ Read Channel " << chnNr << " configuration Read back:");
+
+#ifdef ZOOM_DEBUG
+    ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
+    LOG_DEBUG("@2 Read Channel " << chnNr << " configuration Read back:");
     LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
     LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
     LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
     LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
-    // set new zoom
-    usleep(10000);
-#if 1
-        ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
+#endif
+#if 0  // set again
+    LOG_DEBUG(">-> Set to Channel " << chnNr << " configuration (conf-attr):");
+    LOG_DEBUG("  pic: " << chnAttr.picWidth << "x" << chnAttr.picHeight);
+    LOG_DEBUG("  crop.enable=" << chnAttr.crop.enable << " crop=" << chnAttr.crop.width << "x" << chnAttr.crop.height);
+    LOG_DEBUG("  scaled Attr pos <-" << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
+    LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
+    LOG_DEBUG("  scaler.enable=" << chnAttr.scaler.enable << " ext=" << chnAttr.scaler.outwidth << "x" << chnAttr.scaler.outheight << 
+                    "(x" << zoom_factor << "/10)");
+    ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
     LOG_DEBUG_OR_ERROR(ret, "*** IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
 #endif
     ret = IMP_FrameSource_EnableChn(chnNr);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_EnableChn(" << chnNr << ")");
-
-    usleep(10000);
-        ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
-    LOG_DEBUG("@ Read Channel " << chnNr << " configuration Read back:");
+#if 1
+    ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
+    LOG_DEBUG("@3 Read Channel " << chnNr << " configuration Read back:");
     LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
     LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
     LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
-   LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
-
+    LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
+#endif
     return ret;
 }
 
@@ -1122,8 +1211,22 @@ int set_ircut(bool enable)
 // motor move from idx tile to center tile
 int center_tile(int idx) {
     int x, y;
-    x = ((idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * MAP_DX;
-    y = ((idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * MAP_DY;
+    int motion_dh, motion_dv;
+    _image *image;
+
+    image = &cfg->image0;
+ 
+    if (image->hflip) x = (MAP_H_NUM - (idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * cfg->motor.map_dx;
+    else x = ((idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * cfg->motor.map_dx;
+    if (image->vflip) y = (MAP_V_NUM - (idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * cfg->motor.map_dy;
+    else y = ((idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * cfg->motor.map_dy;
+
+#if 0
+    if (image->hflip) x = (MAP_H_NUM - (idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * MAP_DX;
+    else x = ((idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * MAP_DX;
+    if (image->vflip) y = (MAP_V_NUM - (idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * MAP_DY;
+    else y = ((idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * MAP_DY;
+#endif
 
     LOG_DEBUG("track to rel: " << x << "," << y);
     char cmd;
