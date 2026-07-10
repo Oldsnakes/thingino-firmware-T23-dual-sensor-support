@@ -88,25 +88,29 @@ Selecting zoom area by click and drag.  (up to 2.5x, double click to reset back 
 **\[Light off delay (sec)\]**:  white light off delay (if enabled)  
 **\[Home delay (sec)**\]:  Auto Home delay (if enabled)
 
-##### **\<ROI functions\>:**
-
-<img width="243" height="36" alt="ROI-menu" src="https://github.com/user-attachments/assets/347d18ec-e3ef-420e-ad9b-c72830859b51" />
-
-**\[Clear All ROIs\]**:  Clear ROI on both MAP mode and Box mode.  
-**\[Save ROIs\]**:  Save ROI setting to the Configuration file.  (when a setting changed, the button turn RED, and back to gray after saved)
 
 ##### **\<ROI Map Pan\>:**
 
 <img width="408" height="247" alt="box-mode" src="https://github.com/user-attachments/assets/17fe837b-c233-4902-913b-db4f5a5495f7" />
 
 **Map Mod off**:    
-Select a single ROI by click and drag.
+Select a single ROI (Region Of Interest) area by click and drag.
 
 <img width="405" height="230" alt="map mode" src="https://github.com/user-attachments/assets/b3431695-40c7-45cb-9c51-8470a8cc6c66" />
 
 **Map Mode on**:  
 
-- Select ROI regions by click and drag:  
+- 8 x 6 grid boxs, 48 ROIs.
+- Select ROI regions by click and drag.  The grid box turn LIGHT RED when selected. 
 - Single click on a grid box to select or deselect the grid box  
 - (with a ctrl key down)  Single click on a grid box to center it. (pan and tilt)  
 - Double click select all grid boxes.
+
+  ROI will take effect after [Save ROIs].
+  
+##### **\<ROI Functions\>:**
+
+<img width="243" height="36" alt="ROI-menu" src="https://github.com/user-attachments/assets/347d18ec-e3ef-420e-ad9b-c72830859b51" />
+
+**\[Clear All ROIs\]**:  Clear ROI on both MAP mode and Box mode.  
+**\[Save ROIs\]**:  Save ROI setting to the Configuration file (in /etc/prudynt.json.  When a setting changed, the button turn RED, and back to GRAY after saved)
