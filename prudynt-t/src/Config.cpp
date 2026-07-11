@@ -427,6 +427,8 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"image0.crop_top", image0.crop_top, 0, validateIntGe0},
         {"image0.crop_width", image0.crop_width, 1280, validateIntGe0},
         {"image0.crop_height", image0.crop_height, 720, validateIntGe0},
+        {"image0.zoom_factor", image0.zoom_factor, 10, validateIntGe0},  // x10
+        {"image0.zoom_limit", image0.zoom_limit, 25, validateIntGe0},  // x10
 
         {"image1.ae_compensation", image1.ae_compensation, 128, validateInt255},
         {"image1.anti_flicker", image1.anti_flicker, 2, validateInt2},
@@ -460,6 +462,9 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         {"image1.crop_top", image1.crop_top, 0, validateIntGe0},
         {"image1.crop_width", image1.crop_width, 1280, validateIntGe0},
         {"image1.crop_height", image1.crop_height, 720, validateIntGe0},
+        {"image1.zoom_factor", image1.zoom_factor, 10, validateIntGe0},  // x10
+        {"image1.zoom_limit", image1.zoom_limit, 25, validateIntGe0},  // x10
+
 
         // add webui gpio support, use int to allow status feedback.  0: off, 1: on, 2: allow current state feedback
         {"gpio.sensor_switch", gpio.sensor_switch, 0, validateInt2},  
@@ -501,6 +506,8 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
         // tracking
         {"motor.box_dx", motor.box_dx, 50, validateIntGe0},  
         {"motor.box_dy", motor.box_dy, 50, validateIntGe0},  
+        {"motor.map_dx", motor.map_dx, 80, validateIntGe0},  
+        {"motor.map_dy", motor.map_dy, 60, validateIntGe0},  
 
         {"rtsp.est_bitrate", rtsp.est_bitrate, 5000, validateIntGe0},
         {"rtsp.out_buffer_size", rtsp.out_buffer_size, 500000, validateIntGe0},

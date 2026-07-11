@@ -110,7 +110,23 @@ int IMPSystem::init()
 //    }
 
 #if !defined(NO_TUNINGS)
+    int sensor_select_state;
+    _image *image;
+        
 
+    sensor_select_state = cfg->sensor.select;
+    LOG_DEBUG("*** Setup tuning for sensor 0");
+    image = &cfg->image0;
+    cfg->sensor.select = 0x1;
+    set_tuning(image);
+
+    LOG_DEBUG("*** Setup tuning for sensor 1");
+    image = &cfg->image1;
+    cfg->sensor.select = 0x2;
+    set_tuning(image);
+    cfg->sensor.select = sensor_select_state;
+
+#if 0
     IMPISPAEMin ae_min;
     memset(&ae_min, 0, sizeof(IMPISPAEMin));
 	ae_min.min_it = 10;
@@ -185,6 +201,13 @@ int IMPSystem::init()
     ret = hal::isp::set_defog_strength(static_cast<uint8_t>(cfg->image0.defog_strength));
     LOG_DEBUG_OR_ERROR(ret, "SetDefog_Strength(" << cfg->image0.defog_strength << ")");
 
+    IMPISPHVFLIP hvflip;
+    hvflip = cfg->image0.hflip ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_H_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_H_MODE);
+    hvflip |= cfg->image0.hflip ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_V_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_V_MODE);
+    ret = IMP_ISP_Tuning_SetHVFLIP(hvflip); 
+    hvflip = cfg->image1.hflip ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_H_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_H_MODE);
+    hvflip |= cfg->image1.hflip ? (IMPISPHVFLIP) (hvflip | IMPISP_FLIP_V_MODE) : (IMPISPHVFLIP) (hvflip & ~IMPISP_FLIP_V_MODE);
+    ret = IMP_ISP_Tuning_SetHVFLIP_Sec(hvflip); 
 #endif
 #if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T31) || defined(PLATFORM_C100)
 //    ret = hal::isp::set_drc_strength(cfg->image0.drc_strength);
@@ -246,7 +269,7 @@ int IMPSystem::init()
     // Set the ISP to DAY on launch
     ret = hal::isp::set_running_mode(IMPISP_RUNNING_MODE_DAY);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "SetISPRunningMode(" << IMPISP_RUNNING_MODE_DAY << ")");
-
+#endif // 0
 #endif // #if !defined(NO_TUNINGS)
 
     #if defined(NO_TUNINGS)
@@ -282,6 +305,156 @@ int IMPSystem::init()
 
     LOG_INFO(" ### IMPSystem Done! ###");
     return ret;
+}
+
+int IMPSystem::set_tuning(_image *image) {
+    int ret;
+
+    image->zoom_factor = 10;    // x10
+    image->zoom_limit = 25;     // x10
+#if 0
+    IMPISPAEMin ae_min;
+    memset(&ae_min, 0, sizeof(IMPISPAEMin));
+	ae_min.min_it = 10;
+	ae_min.min_again = 2048;
+	ae_min.min_it_short = 10;
+	ae_min.min_again_short = 2048;
+    ret = IMP_ISP_Tuning_SetAeMin(&ae_min);
+    LOG_DEBUG_OR_ERROR(ret, "IMP_ISP_Tuning_SetAeMin(" << ae_min.min_again << ")");
+    if (NUM_SENSOR == 2) {
+        ret = IMP_ISP_Tuning_SetAeMin_Sec(&ae_min);
+        LOG_DEBUG_OR_ERROR(ret, "IMP_ISP_Tuning_SetAeMin_Sec(" << ae_min.min_again << ")");
+    }
+#endif
+    ret = hal::isp::set_contrast(image->contrast);
+    LOG_DEBUG_OR_ERROR(ret, "SetContrast(" << image->contrast << ")");
+
+    ret = hal::isp::set_sharpness(image->sharpness);
+    LOG_DEBUG_OR_ERROR(ret, "SetSharpness(" << image->sharpness << ")");
+
+    ret = hal::isp::set_saturation(image->saturation);
+    LOG_DEBUG_OR_ERROR(ret, "SetSaturation(" << image->saturation << ")");
+
+    ret = hal::isp::set_brightness(image->brightness);
+    LOG_DEBUG_OR_ERROR(ret, "SetBrightness(" << image->brightness << ")");
+
+#if !defined(PLATFORM_T21)
+    ret = hal::isp::set_sinter_strength(image->sinter_strength);
+    LOG_DEBUG_OR_ERROR(ret, "SetSinterStrength(" << image->sinter_strength << ")");
+#endif
+
+    ret = hal::isp::set_temper_strength(image->temper_strength);
+    LOG_DEBUG_OR_ERROR(ret, "SetTemperStrength(" << image->temper_strength << ")");
+
+    ret = hal::isp::set_hflip(image->hflip);
+    LOG_DEBUG_OR_ERROR(ret, "SetISPHflip(" << image->hflip << ")");
+
+    ret = hal::isp::set_running_mode(image->running_mode);  // cfg default
+    LOG_DEBUG_OR_ERROR(ret, "SetISPRunningMode(" << image->running_mode << ")");
+
+    IMPISPAntiflickerAttr flickerAttr;
+    memset(&flickerAttr, 0, sizeof(IMPISPAntiflickerAttr));
+    ret = hal::isp::set_anti_flicker(image->anti_flicker);
+    LOG_DEBUG_OR_ERROR(ret, "SetAntiFlickerAttr(" << image->anti_flicker << ")");
+
+#if !defined(PLATFORM_T21)
+    ret = hal::isp::set_ae_compensation(image->ae_compensation);
+    LOG_DEBUG_OR_ERROR(ret, "SetAeComp(" << image->ae_compensation << ")");
+#endif
+
+    ret = hal::isp::set_max_again(image->max_again);
+    LOG_DEBUG_OR_ERROR(ret, "SetMaxAgain(" << image->max_again << ")");
+
+    ret = hal::isp::set_max_dgain(image->max_dgain);
+    LOG_DEBUG_OR_ERROR(ret, "SetMaxDgain(" << image->max_dgain << ")");
+
+    ret = hal::isp::set_wb(image->core_wb_mode, image->wb_rgain, image->wb_bgain);
+    if (ret != 0)
+    {
+        LOG_ERROR("Unable to set white balance. Mode: " << image->core_wb_mode << ", rgain: "
+                                                        << image->wb_rgain << ", bgain: " << image->wb_bgain);
+    }
+    else
+    {
+        LOG_DEBUG("Set white balance. Mode: " << image->core_wb_mode << ", rgain: "
+                                              << image->wb_rgain << ", bgain: " << image->wb_bgain);
+    }
+
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31) || defined(PLATFORM_C100)
+    ret = hal::isp::set_hue(image->hue);
+    LOG_DEBUG_OR_ERROR(ret, "SetBcshHue(" << image->hue << ")");
+
+    ret = hal::isp::set_defog_strength(static_cast<uint8_t>(image->defog_strength));
+    LOG_DEBUG_OR_ERROR(ret, "SetDefog_Strength(" << image->defog_strength << ")");
+
+    ret = hal::isp::set_hflip(image->hflip);
+    LOG_DEBUG_OR_ERROR(ret, "SetHFLIP(" << (image->hflip ? "true":"false") << ")");
+    ret = hal::isp::set_vflip(image->vflip);
+    LOG_DEBUG_OR_ERROR(ret, "SetVFLIP(" << (image->vflip ? "true":"false") << ")");
+
+#endif
+#if defined(PLATFORM_T21) || defined(PLATFORM_T23) || defined(PLATFORM_T31) || defined(PLATFORM_C100)
+//    ret = hal::isp::set_drc_strength(image->drc_strength);
+//    LOG_DEBUG_OR_ERROR(ret, "SetDRC_Strength(" << image->drc_strength << ")");
+#endif
+
+#if defined(PLATFORM_T23) || defined(PLATFORM_T31) || defined(PLATFORM_C100)
+    if (image->backlight_compensation > 0)
+    {
+        ret = hal::isp::set_backlight_comp(image->backlight_compensation);
+        LOG_DEBUG_OR_ERROR(ret, "SetBacklightComp(" << image->backlight_compensation << ")");
+    }
+    else if (image->highlight_depress > 0)
+    {
+        ret = hal::isp::set_highlight_depress(image->highlight_depress);
+        LOG_DEBUG_OR_ERROR(ret, "SetHiLightDepress(" << image->highlight_depress << ")");
+    }
+#elif defined(PLATFORM_T21) || defined(PLATFORM_T30)
+    ret = hal::isp::set_highlight_depress(image->highlight_depress);
+    LOG_DEBUG_OR_ERROR(ret, "SetHiLightDepress(" << image->highlight_depress << ")");
+#endif
+    LOG_DEBUG(" ### ISP Tuning Defaults Set.");
+
+    // Clamp sensor FPS to a sane value based on stream0 desired FPS and sensor limits
+    uint32_t desired_sensor_fps = cfg->stream0.fps > 0 ? cfg->stream0.fps : 25;
+    // cfg->sensor.fps is read from /proc/jz/sensor/max_fps; min from min_fps
+    if (cfg->sensor.min_fps > 0 && desired_sensor_fps < cfg->sensor.min_fps) {
+        desired_sensor_fps = cfg->sensor.min_fps;
+    }
+    if (cfg->sensor.fps > 0 && desired_sensor_fps > (int)cfg->sensor.fps) {
+        desired_sensor_fps = cfg->sensor.fps;
+    }
+
+    uint32_t den;
+    uint32_t fps_num;
+    desired_sensor_fps = 10;
+    LOG_DEBUG("# desired_sensor_fps = " << desired_sensor_fps);
+    ret = IMP_ISP_Tuning_SetSensorFPS(desired_sensor_fps, 1);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_SetSensorFPS(" << desired_sensor_fps << ", 1)");
+    if (NUM_SENSOR == 2) {
+        ret = IMP_ISP_Tuning_SetSensorFPS_Sec(desired_sensor_fps, 1);
+        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_SetSensorFPS_Sec(" << desired_sensor_fps << ", 1)");
+    }
+
+    ret = IMP_ISP_Tuning_GetSensorFPS(&fps_num, &den);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorFPS(" << fps_num << ", " << den << ")");
+    if (NUM_SENSOR == 2) {
+        ret = IMP_ISP_Tuning_GetSensorFPS_Sec(&fps_num, &den);
+        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorFPS_Sec(" << fps_num << ", " << den << ")");
+    }
+
+// #if defined(PLATFORM_T21)
+    //T20 T21 only set FPS if it is read after set.
+//    uint32_t fps_num, fps_den;
+    ret = IMP_ISP_Tuning_GetSensorFPS(&fps_num, &den);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_ISP_Tuning_GetSensorFPS(" << fps_num << ", " << den << ")");
+// #endif
+
+    // Set the ISP to DAY on launch
+    ret = hal::isp::set_running_mode(IMPISP_RUNNING_MODE_DAY);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "SetISPRunningMode(" << IMPISP_RUNNING_MODE_DAY << ")");
+
+    return 0;
 }
 
 int IMPSystem::destroy()

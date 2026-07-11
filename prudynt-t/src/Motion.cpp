@@ -70,7 +70,6 @@ void Motion::detect()
     {
         auto currentTime = steady_clock::now();
 
-//        if (global_MipiMode < 3) {  // only work with one steady sensor
         if (global_MipiMode < 4) {  // test for dual setting
             if (tracking_enabled && isMotorActive && motorMoving() 
                     && duration_cast<milliseconds>(currentTime - motorMoveEndTime).count() < cfg->motion.move_time)  //  ***** in ms
@@ -226,40 +225,48 @@ void Motion::detect()
                         }
                         LOG_DEBUG("*** Hot Spot is <" << area_keys[box_idx] << ">");
                         // hit CENTER:  nop
-//                        move_to_center(box_idx);
+                        int motion_dh, motion_dv;
+                        _image *image;
 
-                        if (box_idx != CENTER) {
-#if 1
-                            switch (box_idx) {
-                                case LEFT:
-                                    trackTo(-MOTOR_DH, 0);
-                                    break;
-                                case RIGHT:
-                                    trackTo(MOTOR_DH, 0);
-                                    break;
-                                case UP:
-                                    trackTo(0, -MOTOR_DV);
-                                    break;
-                                case DOWN:
-                                    trackTo(0, MOTOR_DV);
-                                case UP_LEFT:
-                                    trackTo(-MOTOR_DH, 0);
-                                    trackTo(0, -MOTOR_DV);
-                                    break;
-                                case UP_RIGHT:
-                                    trackTo(MOTOR_DH, 0);
-                                    trackTo(0, -MOTOR_DV);
-                                    break;
-                                case DOWN_LEFT:
-                                    trackTo(-MOTOR_DH, 0);
-                                    trackTo(0, MOTOR_DV);
-                                    break;
-                                case DOWN_RIGHT:
-                                    trackTo(MOTOR_DH, 0);
-                                    trackTo(0, MOTOR_DV);
-                                    break;
+                        if (ivsChn == 0) {  // only control motor is it is a PTZ sensor
+                            image = &cfg->image0;
+
+                            motion_dh = cfg->motor.map_dx * ((MAP_H_NUM / 2) + 1); 
+                            if (image->hflip) motion_dh = -motion_dh;  // invert when flip
+                            motion_dv = cfg->motor.map_dy * ((MAP_V_NUM / 2) + 1); 
+                            if (image->vflip) motion_dv = -motion_dv;  // invert when flip
+
+                            if (box_idx != CENTER) {
+                                switch (box_idx) {
+                                    case LEFT:
+                                        trackTo(-motion_dh, 0);
+                                        break;
+                                    case RIGHT:
+                                        trackTo(motion_dh, 0);
+                                        break;
+                                    case UP:
+                                        trackTo(0, -motion_dv);
+                                        break;
+                                    case DOWN:
+                                        trackTo(0, motion_dv);
+                                    case UP_LEFT:
+                                        trackTo(-motion_dh, 0);
+                                        trackTo(0, -motion_dv);
+                                        break;
+                                    case UP_RIGHT:
+                                        trackTo(motion_dh, 0);
+                                        trackTo(0, -motion_dv);
+                                        break;
+                                    case DOWN_LEFT:
+                                        trackTo(-motion_dh, 0);
+                                        trackTo(0, motion_dv);
+                                        break;
+                                    case DOWN_RIGHT:
+                                        trackTo(motion_dh, 0);
+                                        trackTo(0, motion_dv);
+                                        break;
+                                }
                             }
-#endif
                             isMotorActive = true;
                             motorMoveEndTime = steady_clock::now(); // Start motor 
                         }   
@@ -318,43 +325,6 @@ void Motion::detect()
     LOG_DEBUG("Exit motion detect thread.");
 }
 
-#if 0
-int Motion::move_to_center(int box_idx) {
-    if (box_idx != CENTER) {
-        switch (box_idx) {
-            case LEFT:
-                trackTo(-MOTOR_DH, 0);
-                break;
-            case RIGHT:
-                trackTo(MOTOR_DH, 0);
-                break;
-            case UP:
-                trackTo(0, -MOTOR_DV);
-                break;
-            case DOWN:
-                trackTo(0, MOTOR_DV);
-            case UP_LEFT:
-                trackTo(-MOTOR_DH, 0);
-                trackTo(0, -MOTOR_DV);
-                break;
-            case UP_RIGHT:
-                trackTo(MOTOR_DH, 0);
-                trackTo(0, -MOTOR_DV);
-                break;
-            case DOWN_LEFT:
-                trackTo(-MOTOR_DH, 0);
-                trackTo(0, MOTOR_DV);
-                break;
-            case DOWN_RIGHT:
-                trackTo(MOTOR_DH, 0);
-                trackTo(0, MOTOR_DV);
-                break;
-        }
-    }
-    return 0;
-}
-#endif
-
 int Motion::trackTo(int x, int y) 
 {
     char cmd;
@@ -401,17 +371,6 @@ int Motion::motorMoving()
     return ret;
 }
 
-/* TODO:  theory:  
-    if center has lot of hits, not moving
-    else if one area has full hits, go there
-    else if opposit ends both has hits, not moving
-    else if hits are at the same side , goto the side
-    else if corner has hits, go there
-*/
-int Motion::trackCalculate(int x, int y) {
-    return 0;
-}
-
 int Motion::hit2hv(box_region *region, int hit, int nh) {
     region->h = hit % nh;
     region->v = (int) hit / nh;
@@ -437,7 +396,6 @@ int Motion::box2region(int x0, int y0, int x1, int y1) {
 	}		 
     return hit;
 }
-
 
 int Motion::init()
 {

@@ -14,11 +14,11 @@
 #include "Logger.hpp"
 
 const char *text_levels[] = {
-    "EMERGENCY",
-    "ALERT",
-    "CRITICAL",
-    "ERROR",
-    "WARN",
+    "$$$ EMERGENCY",
+    "* ALERT",
+    "$$ CRITICAL",
+    "* ERROR",
+    "- WARN",
     "NOTICE",
     "INFO",
     "DEBUG"};

@@ -58,7 +58,14 @@ which motors > /dev/null && has_motors="true"
 <div class="col-lg-10">
 <div id="frame" class="position-relative mb-2">
 <img id="preview" src="/a/nostream.webp" class="img-fluid" alt="Image: Preview">
-<% if [ "true" = "$has_motors" ]; then %><%in _motors.cgi %><% fi %>
+<style>
+#motor { width: 25vh; height: 25vh;} 
+#motor:hover .jst { visibility: visible; }
+.jst { width: 100%; height: 100%; border-radius: 50%; position: relative; overflow: hidden; visibility: hidden; }
+</style>
+<% if [ "true" = "$has_motors" ]; then %>
+	<%in _motors.cgi %>
+<% fi %>
 </div> 
 <% if [ "true" = "$has_motors" ]; then %>
 <p class="small">Move mouse cursor over the center of the preview image to reveal the motor controls.
@@ -384,6 +391,10 @@ loadConfig().then(() => {
 			lastLoadTime = Date.now();
 		}
 	}, 1000);
+		motor.style.position = "absolute";
+		motor.style.top = '250px';
+                motor.style.left = '50px';
+                motor.style.start = '50px';
 });
 
 ntoggleDayNight();
