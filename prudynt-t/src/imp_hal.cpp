@@ -1216,17 +1216,8 @@ int center_tile(int idx) {
 
     image = &cfg->image0;
  
-    if (image->hflip) x = (MAP_H_NUM - (idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * cfg->motor.map_dx;
-    else x = ((idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * cfg->motor.map_dx;
-    if (image->vflip) y = (MAP_V_NUM - (idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * cfg->motor.map_dy;
-    else y = ((idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * cfg->motor.map_dy;
-
-#if 0
-    if (image->hflip) x = (MAP_H_NUM - (idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * MAP_DX;
-    else x = ((idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * MAP_DX;
-    if (image->vflip) y = (MAP_V_NUM - (idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * MAP_DY;
-    else y = ((idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * MAP_DY;
-#endif
+    x = ((idx % MAP_H_NUM) - (MAP_H_NUM/2) ) * cfg->motor.map_dx;
+    y = ((idx / MAP_H_NUM) - (MAP_V_NUM/2) ) * cfg->motor.map_dy;
 
     LOG_DEBUG("track to rel: " << x << "," << y);
     char cmd;

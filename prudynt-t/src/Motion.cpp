@@ -232,9 +232,7 @@ void Motion::detect()
                             image = &cfg->image0;
 
                             motion_dh = cfg->motor.map_dx * ((MAP_H_NUM / 2) + 1); 
-                            if (image->hflip) motion_dh = -motion_dh;  // invert when flip
                             motion_dv = cfg->motor.map_dy * ((MAP_V_NUM / 2) + 1); 
-                            if (image->vflip) motion_dv = -motion_dv;  // invert when flip
 
                             if (box_idx != CENTER) {
                                 switch (box_idx) {
