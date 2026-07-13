@@ -16,7 +16,7 @@ Changed/Added Features:
 - Integrate daynight sensing to Prudynt-T.
 - Add variable digital zoom for each sensor, up to 2.5x. The zoom can be done in multi-levels.
 
-<img width="458" height="535" alt="config-streamer-dual" src="https://github.com/user-attachments/assets/e96c9db7-0013-4a9f-bd07-2b4980a8556b" />
+<img width="675" height="641" alt="Stremer-osd" src="https://github.com/user-attachments/assets/02da38fd-3522-435f-aae7-6488b003d4f3" />
 
 ![service-motion-map](https://github.com/user-attachments/assets/1d25a4b6-20cd-46fe-a0c5-3ee2d687f9d0)
 
