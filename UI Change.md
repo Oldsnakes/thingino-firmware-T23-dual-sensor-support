@@ -79,14 +79,14 @@ Selecting zoom area by click and drag.  (up to 2.5x, double click to reset back 
 <img width="393" height="167" alt="motion-menu" src="https://github.com/user-attachments/assets/f44bc684-ebc5-4bd6-95d7-18c9e967cdc4" />
 
 **\[Enable motion guard\]**:  Enable Motion Detection  
-**\[Monitor Stream\]**:  ROI Map Pan stream selection (only the stream 0 has the motion functions).  
+**\[Monitor Stream\]**:  ROI Map Pan stream selection (only the stream 0 has the motor functions).  
 **\[Map Mode\]**:   on \- Enable Map Mode / off \- Box Mode   
-**\[Auto Tracking\]**:  Enable Auto Tracking on detected a motion  
-**\[Auto Home\]**:  Enable back to home location after motion detection  
+**\[Auto Tracking\]**:  Enable Auto Tracking on detected a motion (stream 0 only)
+**\[Auto Home\]**:  Enable back to home location after motion detection (stream 0 only)
 **\[Sensibility\]**:  Motion detection sensibility  
 **\[Delay between events\]**:  action after multiple detection on the event (debounce)  
 **\[Light off delay (sec)\]**:  white light off delay (if enabled)  
-**\[Home delay (sec)**\]:  Auto Home delay (if enabled)
+**\[Home delay (sec)**\]:  Auto Home delay (if enabled, stream 0 only)
 
 
 ##### **\<ROI Map Pan\>:**
