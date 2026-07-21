@@ -36,7 +36,7 @@ Select the active Preview Pan for Zoom function.
 Enable or disable the second preview pan.  When disabled, the preview pan will change with the Camera Select.  
 
 **\[Zoom Enable\]**:  (per camera)  
-		When disabled, the view will reset back to the full view and reset the zoom settings.  
+		When disabled, the view will back to the full view and enabled will restore back to the last zoom settings.  
 **\[Flip horizontally\]** and **\[Flip vertically\]**:  (per camera)  
 		Flip the view in the preview pan(s) based on the Image Control  \<Camera Setting Select\>.
 
@@ -58,11 +58,11 @@ Enable or disable the second preview pan.  When disabled, the preview pan will c
 
 <img width="514" height="471" alt="Screenshot 2026-07-09 191930" src="https://github.com/user-attachments/assets/94dc30eb-636d-4dfd-92f1-b67b71018f5b" />
 
-##### **\<Dual Preview Pans\>:  (click to select, and select by the \<Camera Select\>)**
+##### **\<Dual Preview Pans\>:  (click to select, or select by the \<Camera Select\>)**
 
 <img width="625" height="183" alt="dual-view" src="https://github.com/user-attachments/assets/13a007dd-7acb-4a03-b19d-75a34f8a5749" />
 
-Selecting zoom area by click and drag.  (up to 2.5x, double click to reset back to full view \- 1x)  
+Selecting zoom area by click and drag.  (up to 2.5x, double click to reset back to the full view \- 1x)  
 <img width="578" height="170" alt="zoom-view" src="https://github.com/user-attachments/assets/7af5a306-c22a-4294-9f40-64b8c38cb2bb" />
 
 #### **Stream 0 and Stream 1 Tabs:**  --	Combined stream settings with OSD settings.
@@ -106,7 +106,7 @@ Select a single ROI (Region Of Interest) area by click and drag.
 - (with a ctrl key down)  Single click on a grid box to center it. (pan and tilt)  
 - Double click select all grid boxes.
 
-  ROI will take effect after [Save ROIs].
+  ROI changes will take effect after [Save ROIs].
   
 ##### **\<ROI Functions\>:**
 
@@ -114,3 +114,39 @@ Select a single ROI (Region Of Interest) area by click and drag.
 
 **\[Clear All ROIs\]**:  Clear ROI on both MAP mode and Box mode.  
 **\[Save ROIs\]**:  Save ROI setting to the Configuration file (in /etc/prudynt.json.  When a setting changed, the button turn RED, and back to GRAY after saved)
+
+Note:  The motion detection operation is after all the IMP functions.  The native zoom will take effect before the motion guard operation.  Therefore, all the ROI function is based on whatever the image presents on preview rather of the full sensor image.
+
+## **Preview page:**
+##### **\<Function Buttons\>:**
+<img width="539" height="68" alt="preview buttons" src="https://github.com/user-attachments/assets/aee6f252-a289-4faa-94dc-aa6dc41410ad" />
+
+**\[Motion Guard\]**:  Enable the Motion Guard  
+**\[Rotate Image\]**:  Roate Image  
+**\[Night\]**:	Switch to Night mode  
+**\[Color\]**:  Color mode  
+**\[IR Cut\]**:  IR filter for both cameras  
+**\[IR-850 Ligh\]**:  IR LED for both cameras  
+**\[IR-940 Light\]**:  IR LED for both cameras  
+**\[White Light\]**:  White LED at Pan and Tilt camera   
+**\[\</\>\]**:  Full view on selected preview  
+**\[\Download\]**:  Download Image
+
+##### **\<Camera Select\>:**
+
+<img width="378" height="44" alt="preview checkbox" src="https://github.com/user-attachments/assets/3a12f820-c93d-458c-992a-65ea41a6dd2b" />
+
+**\[Zoom Enable\]**:  (per camera)  
+		When disabled, the view will back to the full view and enabled will restore back to the last zoom settings.  
+**\[Dual Camera\]**:   
+Enable or disable the second preview pan.  When disabled, the main preview pan will change the view with the Camera Select.  
+
+Select the active Preview Pan for Zoom function.  
+**\[Camera 1\]**:  The Pan and Tilt Camera  
+**\[Camera 2\]**:  The Fix view Camera  
+**\[\</\>\]**:  Full view on selected preview.
+
+##### **\<Dual Preview Pans\>: (click to select)**
+- Selecting zoom area by click and drag.  (up to 2.5x, double click to reset back to the full view \- 1x)  
+- Hold shift key down for supressing the motor control to allow select zoom area in the main preview pan.
+- With a ctrl key down, single click on a grid box to center it. (pan and tilt)
