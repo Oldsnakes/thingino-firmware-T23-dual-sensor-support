@@ -118,6 +118,8 @@ Select a single ROI (Region Of Interest) area by click and drag.
 Note:  The motion detection operation is after all the IMP functions.  The native zoom will take effect before the motion guard operation.  Therefore, all the ROI function is based on whatever the image presents on preview rather of the full sensor image.
 
 ## **Preview page:**
+<img width="406" height="473" alt="dual preview" src="https://github.com/user-attachments/assets/780a4fbb-6d61-4fbb-855e-7b827f3d1e1d" />
+
 ##### **\<Function Buttons\>:**
 <img width="539" height="68" alt="preview buttons" src="https://github.com/user-attachments/assets/aee6f252-a289-4faa-94dc-aa6dc41410ad" />
 
