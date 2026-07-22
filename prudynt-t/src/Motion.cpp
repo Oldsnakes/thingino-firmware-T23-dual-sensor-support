@@ -145,7 +145,7 @@ void Motion::detect()
                             moving = true;
                             LOG_INFO(" * Motion Started in roi<" << i << ">");
 #ifdef MOTION_DEBUG
-                            LOG_DEBUG("whiteLight state = " << cfg->motion.whiteLight << " post_time = " << cfg->motion.post_time);
+                            LOG_DEBUG("White Light state = " << cfg->motion.whiteLight << " post_time = " << cfg->motion.post_time);
 #endif
                             if (cfg->motion.whiteLight) {  // light ON
                                 // preserve current light state
@@ -496,9 +496,12 @@ int Motion::init()
     ret = IMP_IVS_StartRecvPic(ivsChn);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_IVS_StartRecvPic(" << ivsChn << ")")
 
+    int fs_gid = 0;
+    if (cfg->motion.monitor_stream == 1) fs_gid = 3;
+
     fs = {
         /**< Device ID */ DEV_ID_FS,
-        /**< Group ID */  cfg->motion.monitor_stream,
+        /**< Group ID */  fs_gid,
         /**< output ID */ 1
     };
 
@@ -508,14 +511,15 @@ int Motion::init()
         /**< output ID */ 0
     };
 
-    ret = IMP_FrameSource_DisableChn(cfg->motion.monitor_stream);
-    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_DisableChn(" << cfg->motion.monitor_stream << ")");
+
+    ret = IMP_FrameSource_DisableChn(fs_gid);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_DisableChn(" << fs_gid << ")");
 
     ret = IMP_System_Bind(&fs, &ivs_cell);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_System_Bind(&fs, &ivs_cell)");
 
-    ret = IMP_FrameSource_EnableChn(cfg->motion.monitor_stream);
-    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_EnableChn(" << cfg->motion.monitor_stream << ")");
+    ret = IMP_FrameSource_EnableChn(fs_gid);
+    LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_EnableChn(" << fs_gid << ")");
 
     return ret;
 }
