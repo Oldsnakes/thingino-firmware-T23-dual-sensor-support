@@ -148,7 +148,7 @@ default_for rtsp_password "thingino"
     <style>
         .box {
             width: 500px;
-            height: 85px;
+            height: 170px;
             background-color: #303030; 
             border: 2px solid #505050;
             padding: 10px;
@@ -178,17 +178,11 @@ default_for rtsp_password "thingino"
 <%in _motors.cgi %>
 <% fi %>
 
-<div class="box" height=120px>
+<div class="box">
 <div class="row g-2">
 <div class="col-6"><% field_switch "image_alt_sensor" "Dual Camera" %></div>
 <div class=col-6><% field_switch "image_zoom_enable" "Zoom Enabled" %></div>
-<div class="col-6"><% field_switch "image_hflip" "Flip horizontally" %></div>
-<div class="col-6"><% field_switch "image_vflip" "Flip vertically" %></div>
-</div>
-</div>
 <p class="large">----- Light Control -----</p>
-<div class="box">
-<div class="row g-2">
 <div class="col-6"><% field_switch "gpio_white" "White Light" %></div>
 <div class="col-6"><% field_switch "gpio_ir850" "IR-850 Light" %></div>
 <div class="col-6"><% field_switch "gpio_ir940" "IR-940 Light" %></div>
@@ -238,8 +232,10 @@ default_for rtsp_password "thingino"
 <div class="col-4"><% field_range "image_core_expr_time" "Time - msec ( 0 - 2234)" "0,2234,1" %></div>
 <div class="col-2"><% field_switch "image_again_mode" "Manual Gain" %></div>
 <div class="col-4"><% field_range "image_again_gain" "     Analog Gain (0-100,000)" "0,100000,100" %></div>
+<div class="col-4"><% field_switch "image_running_mode" "B/W mode" %></div>
+<div class="col-4"><% field_switch "image_hflip" "Flip horizontally" %></div>
+<div class="col-4"><% field_switch "image_vflip" "Flip vertically" %></div>
 </div>
-<% field_switch "image_running_mode" "Black-and-white mode" %>
 <div class="row row-cols-1 row-cols-lg-4 g-2">
 <div class="col"><% field_range "image_brightness" "Brightness" "0,255,1" %></div>
 <div class="col"><% field_range "image_contrast" "Contrast" "0,255,1" %></div>
@@ -1253,16 +1249,21 @@ window.onload =
 		image_crop_top.value = 0;
 		image_crop_width.value = width;
 		image_crop_height.value = height;
+		image_scaler_outwidth.value = width;
+		image_scaler_outheight.value = height;
 		image_crop_left.textContent= 0;
 		image_crop_top.textContent = 0;
 		image_crop_width.textContent = width;
 		image_crop_height.textContent = height;
-		$('#image_zoom_enable').value = false;
+		image_scaler_outwidth.textContent = width;
+		image_scaler_outheight.textContent = height;
+		$('#image_zoom_enable').value = true;
 		if (e.currentTarget.id == 'imageCanvas')
 			sv = 1;
 		else 
 			sv = 2;
 
+		sendToEndpoint(`{"image":{"zoom_factor":10}}`);
 		saveZoom("image",sv);
         }
 	//  keyboard function

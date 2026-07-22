@@ -277,6 +277,7 @@ namespace {
         add_int_v("crop_height",std::string(root)+".crop_height");
         add_int_v("scaler_outwidth",std::string(root)+".scaler_outwidth");
         add_int_v("scaler_outheight",std::string(root)+".scaler_outheight");
+        add_int_v("zoom_factor",std::string(root)+".zoom_factor");
 
         add_boolk("zoom_enable", std::string(root)+".zoom_enable",
             []{ hal::isp::set_zoom_enable(true); },

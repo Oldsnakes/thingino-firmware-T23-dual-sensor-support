@@ -996,21 +996,25 @@ int set_FramesourceAttr(bool enable, int sensor)
         }
     } else return -1;
 
+    zoom_factor = image->zoom_factor;
+
     IMPFSChnAttr chnAttr;
     memset(&chnAttr, 0, sizeof(IMPFSChnAttr));
     IMPFSChnAttr chnAttr_r;  // readback
     memset(&chnAttr_r, 0, sizeof(IMPFSChnAttr));
 
     ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr);
+#ifdef ZOOM_DEBUG
     LOG_DEBUG("* Read Channel " << chnNr << " configuration current setting:");
     LOG_DEBUG("  pic: " << chnAttr.picWidth << "x" << chnAttr.picHeight);
     LOG_DEBUG("  crop.enable=" << chnAttr.crop.enable << " crop=" << chnAttr.crop.width << "x" << chnAttr.crop.height);
-    LOG_DEBUG("      Attr pos <-" << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
-    LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
+    LOG_DEBUG("      Attr pos <= " << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
+    LOG_DEBUG("       cfg pos <= " << image->crop_left << " ^ " << image->crop_top);
     LOG_DEBUG("  scaler.enable=" << chnAttr.scaler.enable << " ext=" << chnAttr.scaler.outwidth << "x" << chnAttr.scaler.outheight);
     LOG_DEBUG("  fps=" << chnAttr.outFrmRateNum << "/" << chnAttr.outFrmRateDen << " nrVBs=" << chnAttr.nrVBs << " pixFmt=" << chnAttr.pixFmt);
     LOG_DEBUG("  vflip = " << (image->vflip ? "true":"false") << " hflip = " << (image->hflip ? "true":"false") );
     LOG_DEBUG("  zoom_factor = " << image->zoom_factor << " zoom_limit = " << image->zoom_limit);
+#endif
         
     if (image->crop_width < 16 || image->crop_height < 16) enable = false;  // too small, treat as reset
 
@@ -1067,33 +1071,10 @@ int set_FramesourceAttr(bool enable, int sensor)
         chnAttr.crop.top *= (double) zoom_factor / 10;
 
     } else {    // disable Zoom
-        chnAttr.crop.left = 0;
         image->crop_left = 0;
-        chnAttr.crop.top = 0;
         image->crop_top = 0;
-        chnAttr.crop.width = stream->width;
-        chnAttr.crop.height = stream->height;
-        chnAttr.scaler.outwidth = stream->width;
-        chnAttr.scaler.outheight = stream->height;
-        chnAttr.picWidth = stream->width;
-        chnAttr.picHeight = stream->height;
-        zoom_factor = 10;  // x10
-        // reset configuration first, for future readback
-        LOG_DEBUG("-> Zoom reset Channel " << chnNr << ", disable");
-        ret = IMP_FrameSource_DisableChn(chnNr); 
-        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_DisableChn(" << chnNr << ")");
-        ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);  // reset values before disable the scaler/crop
-        LOG_DEBUG_OR_ERROR(ret, "*-* IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
-        ret = IMP_FrameSource_EnableChn(chnNr);
-        LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_EnableChn(" << chnNr << ")");
-        ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
-#ifdef ZOOM_DEBUG
-        LOG_DEBUG("@0 Read Channel " << chnNr << " configuration Read back:");
-        LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
-        LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
-        LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
-        LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
-#endif
+        image->crop_width = stream->width;
+        image->crop_height = stream->height;
         // now, disable Zoom
         chnAttr.scaler.enable = 0;
         chnAttr.crop.enable = 0;
@@ -1130,21 +1111,16 @@ int set_FramesourceAttr(bool enable, int sensor)
 
     image->zoom_factor = zoom_factor;
 
-    ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
 #ifdef ZOOM_DEBUG
-    LOG_DEBUG("@1 Read Channel " << chnNr << " configuration Read back:");
-    LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
-    LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
-    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
-    LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
-#endif
+    ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
     LOG_DEBUG("-> Set Channel " << chnNr << " configuration (attr):");
     LOG_DEBUG("  pic: " << chnAttr.picWidth << "x" << chnAttr.picHeight);
     LOG_DEBUG("  crop.enable=" << chnAttr.crop.enable << " crop=" << chnAttr.crop.width << "x" << chnAttr.crop.height);
-    LOG_DEBUG("  scaled Attr pos <-" << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
-    LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
+    LOG_DEBUG("  scaled Attr pos <= " << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
+    LOG_DEBUG("       cfg pos <= " << image->crop_left << " ^ " << image->crop_top);
     LOG_DEBUG("  scaler.enable=" << chnAttr.scaler.enable << " ext=" << chnAttr.scaler.outwidth << "x" << chnAttr.scaler.outheight << 
                     "(x" << zoom_factor << "/10)");
+#endif
 
     ret = IMP_FrameSource_DisableChn(chnNr);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_DisableChn(" << chnNr << ")");
@@ -1153,33 +1129,14 @@ int set_FramesourceAttr(bool enable, int sensor)
     ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
     LOG_DEBUG_OR_ERROR(ret, "* * IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
 
-#ifdef ZOOM_DEBUG
-    ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
-    LOG_DEBUG("@2 Read Channel " << chnNr << " configuration Read back:");
-    LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
-    LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
-    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
-    LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
-#endif
-#if 0  // set again
-    LOG_DEBUG(">-> Set to Channel " << chnNr << " configuration (conf-attr):");
-    LOG_DEBUG("  pic: " << chnAttr.picWidth << "x" << chnAttr.picHeight);
-    LOG_DEBUG("  crop.enable=" << chnAttr.crop.enable << " crop=" << chnAttr.crop.width << "x" << chnAttr.crop.height);
-    LOG_DEBUG("  scaled Attr pos <-" << chnAttr.crop.left << " ^ " << chnAttr.crop.top);
-    LOG_DEBUG("       cfg pos <-" << image->crop_left << " ^ " << image->crop_top);
-    LOG_DEBUG("  scaler.enable=" << chnAttr.scaler.enable << " ext=" << chnAttr.scaler.outwidth << "x" << chnAttr.scaler.outheight << 
-                    "(x" << zoom_factor << "/10)");
-    ret = IMP_FrameSource_SetChnAttr(chnNr, &chnAttr);
-    LOG_DEBUG_OR_ERROR(ret, "*** IMP_FrameSource_SetChnAttr(" << chnNr << ", &chnAttr) - " << ret);
-#endif
     ret = IMP_FrameSource_EnableChn(chnNr);
     LOG_DEBUG_OR_ERROR_AND_EXIT(ret, "IMP_FrameSource_EnableChn(" << chnNr << ")");
-#if 1
+#ifdef ZOOM_DEBUG
     ret = IMP_FrameSource_GetChnAttr(chnNr, &chnAttr_r);
-    LOG_DEBUG("@3 Read Channel " << chnNr << " configuration Read back:");
+    LOG_DEBUG("@ Read Channel " << chnNr << " configuration Read back:");
     LOG_DEBUG("  pic: " << chnAttr_r.picWidth << "x" << chnAttr_r.picHeight);
     LOG_DEBUG("  crop.enable=" << chnAttr_r.crop.enable << " crop=" << chnAttr_r.crop.width << "x" << chnAttr_r.crop.height);
-    LOG_DEBUG("      Attr pos <-" << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
+    LOG_DEBUG("      Attr pos <= " << chnAttr_r.crop.left << " ^ " << chnAttr_r.crop.top);
     LOG_DEBUG("  scaler.enable=" << chnAttr_r.scaler.enable << " ext=" << chnAttr_r.scaler.outwidth << "x" << chnAttr_r.scaler.outheight);
 #endif
     return ret;
