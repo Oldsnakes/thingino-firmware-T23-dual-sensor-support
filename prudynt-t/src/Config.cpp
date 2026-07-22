@@ -496,7 +496,7 @@ std::vector<ConfigItem<int>> CFG::getIntItems()
 
         {"motor.x", motor.x, 0, validateIntGe0},  // current motor position
         {"motor.y", motor.y, 0, validateIntGe0},  
-        {"motor.home_x", motor.home_x, 2000, validateIntGe0},  // motor home position
+        {"motor.home_x", motor.home_x, 2001, validateIntGe0},  // motor home position
         {"motor.home_y", motor.home_y, 1000, validateIntGe0},  
         {"motor.max_x", motor.max_x, 0, validateIntGe0},  // motor max limit
         {"motor.max_y", motor.max_y, 0, validateIntGe0},  
